@@ -24,6 +24,11 @@ def add_bump_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--no-commit", action="store_true", help="Do not commit")
     parser.add_argument("--no-tag", action="store_true", help="Do not tag")
     parser.add_argument("--config", type=str, help="Path to config file")
+    parser.add_argument(
+        "--version-source",
+        choices=["file", "local_tag", "remote_tag", "auto"],
+        help="Source for current version: file|local_tag|remote_tag|auto",
+    )
 
     # Release notes
     parser.add_argument("--notes", type=str, help="Inline release notes (use \\n for newlines)")
@@ -258,40 +263,44 @@ def handle_cache_command(args: argparse.Namespace) -> int:
 
 
 def main(argv: Optional[list[str]] = None) -> int:
-    print_version_header()
-    parser = create_parser()
     try:
-        args = parser.parse_args(argv)
-    except SystemExit:
-        return 1
-
-    if not getattr(args, "command", None):
-        parser.print_help()
-        return 1
-
-    if args.command == "bump":
-        return handle_bump_command(args)
-    if args.command == "init":
-        return handle_init_command(args)
-    if args.command == "commit-gen":
+        print_version_header()
+        parser = create_parser()
         try:
-            from .commit_gen import run as run_gen
-            return run_gen(args)
-        except Exception as e:
-            logger.error(f"Commit message generation failed: {e}")
+            args = parser.parse_args(argv)
+        except SystemExit:
             return 1
-    if args.command == "commit-lint":
-        try:
-            from .commit_lint import run as run_lint
-            return run_lint(args)
-        except Exception as e:
-            logger.error(f"Commit lint failed: {e}")
-            return 1
-    if args.command == "cache":
-        return handle_cache_command(args)
 
-    logger.error(f"Unknown command: {args.command}")
-    return 1
+        if not getattr(args, "command", None):
+            parser.print_help()
+            return 1
+
+        if args.command == "bump":
+            return handle_bump_command(args)
+        if args.command == "init":
+            return handle_init_command(args)
+        if args.command == "commit-gen":
+            try:
+                from .commit_gen import run as run_gen
+                return run_gen(args)
+            except Exception as e:
+                logger.error(f"Commit message generation failed: {e}")
+                return 1
+        if args.command == "commit-lint":
+            try:
+                from .commit_lint import run as run_lint
+                return run_lint(args)
+            except Exception as e:
+                logger.error(f"Commit lint failed: {e}")
+                return 1
+        if args.command == "cache":
+            return handle_cache_command(args)
+
+        logger.error(f"Unknown command: {args.command}")
+        return 1
+    except KeyboardInterrupt:
+        logger.info("\nOperation cancelled by user")
+        return 130  # Standard exit code for SIGINT
 
 
 if __name__ == "__main__":

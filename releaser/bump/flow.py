@@ -17,6 +17,7 @@ from releaser.ai.generator import generate_release_notes_with_fallback
 import configparser
 import re
 from pathlib import Path
+import unicodedata
 
 
 @dataclass
@@ -140,8 +141,54 @@ def run(args) -> int:
         logger.error("No compatible provider detected (Poetry expected). Ensure pyproject.toml exists.")
         return 1
 
-    current_version = provider.read_version()
     tag_prefix = cfg.project.tag_prefix or "v"
+
+    # Determine current version source
+    version_source = getattr(args, "version_source", None) or getattr(cfg.release.version, "source", "file")
+
+    def _strip_prefix(tag: str) -> str:
+        if not tag:
+            return tag
+        return tag[len(tag_prefix):] if tag_prefix and tag.startswith(tag_prefix) else tag
+
+    # Always read file version for fallback and for writing later
+    file_version = provider.read_version()
+    current_version = file_version
+
+    # Optionally select from tag sources
+    if version_source == "local_tag":
+        tag = git_utils.get_latest_tag()
+        if tag:
+            current_version = _strip_prefix(tag)
+            logger.info(f"Using current version from latest local tag: {tag}")
+        else:
+            logger.warning("No local tags found; falling back to file version")
+    elif version_source == "remote_tag":
+        tag = git_utils.get_latest_remote_tag(prefix=tag_prefix)
+        if tag:
+            current_version = _strip_prefix(tag)
+            logger.info(f"Using current version from latest remote tag: {tag}")
+        else:
+            logger.warning("No remote tags found; falling back to file version")
+    elif version_source == "auto":
+        tag = git_utils.get_latest_tag()
+        if not tag:
+            # try remote as a backup
+            tag = git_utils.get_latest_remote_tag(prefix=tag_prefix)
+        tag_version = _strip_prefix(tag) if tag else ""
+        try:
+            from releaser.bump.semver import parse as _p
+            fa = _p(file_version)
+            ta = _p(tag_version) if tag_version else None
+            fkey = (fa.major, fa.minor, fa.patch, 1 if not fa.pre else 0)
+            tkey = (ta.major, ta.minor, ta.patch, 1 if not ta.pre else 0) if ta else (-1, -1, -1, -1)
+            if tkey > fkey:
+                current_version = tag_version
+                logger.info(f"Auto-selected current version from tag: {tag}")
+        except Exception:
+            # If parsing fails, keep file version
+            pass
+
     logger.info(f"Detected provider: poetry • Current version: {tag_prefix}{current_version}")
 
     # Decide bump type / target version

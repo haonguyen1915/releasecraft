@@ -134,6 +134,7 @@ def run(args) -> int:
                 "strategy": "auto",
                 "since": "",
                 "to": "HEAD",
+                "source": "file",
             },
             "pre_release": {
                 "enabled": pre_enabled,
@@ -250,6 +251,9 @@ def _render_full_config(doc: Dict[str, object]) -> str:
     lines.append(f"strategy = \"{version_cfg.get('strategy', 'auto') if isinstance(version_cfg, dict) else 'auto'}\"\n")
     lines.append(f"since = \"{version_cfg.get('since', '') if isinstance(version_cfg, dict) else ''}\"\n")
     lines.append(f"to = \"{version_cfg.get('to', 'HEAD') if isinstance(version_cfg, dict) else 'HEAD'}\"\n")
+    # How to resolve the current version used as the bump base
+    # Options: file|local_tag|remote_tag|auto
+    lines.append(f"source = \"{version_cfg.get('source', 'file') if isinstance(version_cfg, dict) else 'file'}\"\n")
 
     lines.append("\n[release.pre_release]\n")
     lines.append(f"enabled = {b(bool(pre_release.get('enabled', False)) if isinstance(pre_release, dict) else False)}\n")

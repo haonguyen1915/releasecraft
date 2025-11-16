@@ -151,6 +151,7 @@ Minimal flags (Phase 1):
 - `--pre` Use pre-release flow based on config (e.g., -rc.N)
 - `--finalize` Convert pre-release to stable (drop suffix)
 - `--dry-run` Preview without any changes
+- `--version-source {file,local_tag,remote_tag,auto}` Choose how to resolve the current version used as the bump base. `file` reads from project files (default), `local_tag` uses the latest local tag, `remote_tag` uses the latest tag on the Git remote, `auto` picks the newer of file vs latest tag.
 - `--push` Push after commit/tag (overrides config default)
 - `--no-commit` Do not create a commit
 - `--no-tag` Do not create a tag
@@ -208,6 +209,7 @@ When a `.releaser.toml` (or `~/.releaser/config.toml`) is present, the simplest 
 
 Notes:
 - CLI flags always override config. For example, `--no-commit`, `--no-tag`, `--push`, `--pre-channel`, or `--tag-prefix` take precedence.
+- Current version resolution can be configured under `[release.version]` using `source = "file|local_tag|remote_tag|auto"`. The default is `file`. When using tag-based sources, tag prefix from `[project].tag_prefix` is respected and stripped from the version value.
 - Providers follow config: if `use_native = true`, native commands are preferred (e.g., `npm version`, `poetry version`), and file targets are then synced.
 - Git range uses config `[version] since/to` when set; otherwise defaults to “since last tag … to HEAD”.
 

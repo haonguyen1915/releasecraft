@@ -59,6 +59,13 @@ def _merge_into_config(cfg: AppConfig, data: Dict[str, Any]) -> None:
                 cfg.release.version.since = str(rver.get("since") or cfg.release.version.since)
             if "to" in rver:
                 cfg.release.version.to = str(rver.get("to") or cfg.release.version.to)
+            if "source" in rver:
+                try:
+                    src = str(rver.get("source") or cfg.release.version.source)
+                    if src in {"file", "local_tag", "remote_tag", "auto"}:
+                        cfg.release.version.source = src
+                except Exception:
+                    pass
 
         # [release.pre_release] subsection
         rpre = rel.get("pre_release", {}) or {}

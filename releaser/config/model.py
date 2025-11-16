@@ -18,6 +18,10 @@ class VersionConfig:
     strategy: str = "auto"
     since: str = ""
     to: str = "HEAD"
+    # Source for determining the current version used as bump base
+    # Options: "file" (read from project files), "local_tag" (latest local tag),
+    # "remote_tag" (latest tag on remote), "auto" (choose newer between file and latest tag)
+    source: str = "file"
 
 
 @dataclass
