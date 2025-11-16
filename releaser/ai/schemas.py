@@ -1,13 +1,6 @@
 from __future__ import annotations
 
-try:
-    from pydantic import BaseModel
-except Exception:  # pragma: no cover
-    # Light fallback to avoid hard dependency during import paths that don't use AI
-    class BaseModel:  # type: ignore
-        def __init__(self, **kwargs):
-            for k, v in kwargs.items():
-                setattr(self, k, v)
+from pydantic import BaseModel
 
 
 class Section(BaseModel):
@@ -47,4 +40,3 @@ class ReleaseNotes(BaseModel):
             parts.extend(f"- {l}" for l in self.limitations if l)
             parts.append("")
         return "\n".join(parts).strip()
-

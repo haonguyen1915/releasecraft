@@ -1,0 +1,52 @@
+Generate comprehensive release notes for version **{{ current_version }}** (upgrading from {{ previous_version }}).
+
+## Repository Information
+- **Previous Version**: {{ previous_version }}
+- **New Version**: {{ current_version }}
+- **Total Commits**: {{ commits|length }}
+
+## Commit History
+{% for commit in commits %}
+**{{ commit.hash[:8] }}** - {{ commit.message }}
+  - Author: {{ commit.author }}
+  - Date: {{ commit.date }}
+{% endfor %}
+
+{% if diffs %}
+---
+
+## Code Changes (Important/Unclear Commits)
+
+The following commits have code diffs provided for additional context. Use these to better understand the scope and impact of changes:
+
+{% for commit_hash, diff_text in diffs.items() %}
+### Commit {{ commit_hash[:8] }}
+
+```diff
+{{ diff_text[:3000] }}{% if diff_text|length > 3000 %}
+
+... (diff truncated for brevity)
+{% endif %}
+```
+
+{% endfor %}
+{% endif %}
+
+---
+
+## Instructions
+
+Please analyze the above commits{% if diffs %} and code changes{% endif %} to generate structured release notes following these requirements:
+
+1. **Summary**: Provide a 1-2 sentence overview of this release's purpose and main themes
+2. **Highlights**: List 2-5 most impactful changes that users will care about most
+3. **Breaking Changes**: Identify any breaking changes that require user action (look for "!" or "BREAKING CHANGE")
+4. **Sections**: Organize remaining changes into logical groups:
+   - **Features**: New capabilities (from `feat:` commits)
+   - **Bug Fixes**: Issues resolved (from `fix:` commits)
+   - **Improvements**: Performance, UX, or quality enhancements
+   - **Documentation**: Significant doc updates
+   - Other relevant categories as needed
+5. **Limitations**: Note any known issues or limitations (if apparent from commits)
+
+Focus on **user impact** rather than technical implementation details. Use clear, action-oriented language.
