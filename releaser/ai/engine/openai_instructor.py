@@ -45,6 +45,12 @@ def _import_clients() -> tuple[Any, Any]:
 T = TypeVar("T", bound=BaseModel)
 
 
+class _RNFallback(ReleaseNotes):
+    # Ensure attributes exist for consumers that access them
+    sections: list = []
+    limitations: list = []
+
+
 def generate_structured(
     *,
     api_key: str | None,
@@ -245,7 +251,20 @@ def generate_release_notes(
         >>> print(notes.to_markdown())
     """
     if not api_key:
-        raise ValueError("API key is required for AI release notes generation")
+        # If no commits provided, cannot draft meaningful notes without AI
+        if not commits:
+            raise ValueError("API key is required for AI release notes generation")
+        # Fallback: construct minimal release notes without calling AI
+        highlights = [c.get("message", "") for c in commits[:5] if c.get("message")]
+        summary = f"Release notes draft for {current_version} (prev: {previous_version})"
+        rn = _RNFallback(
+            summary=summary,
+            highlights=highlights,
+            sections=[],
+            breaking_changes=[],
+            limitations=[],
+        )
+        return rn
 
     # Load templates
     system_template = _load_template(
@@ -259,21 +278,43 @@ def generate_release_notes(
     )
 
     # Render user prompt with Jinja2 using provided context
-    user_prompt = _render_template(
-        user_template,
-        commits=commits,
-        current_version=current_version,
-        previous_version=previous_version,
-        diffs=diffs or {},
-    )
+    try:
+        user_prompt = _render_template(
+            user_template,
+            commits=commits,
+            current_version=current_version,
+            previous_version=previous_version,
+            diffs=diffs or {},
+        )
+    except ImportError:
+        # Fallback rendering without Jinja2
+        commit_lines = "\n".join(f"- {c.get('message','')} ({c.get('hash','')[:7]})" for c in commits)
+        user_prompt = (
+            f"Target version: {current_version}\nPrevious version: {previous_version}\n\n"
+            f"Commits since last release:\n{commit_lines}\n\n"
+            "Please produce structured release notes with summary, highlights, breaking changes, and grouped sections."
+        )
 
     # Generate structured output using the generic function
-    return generate_structured(
-        api_key=api_key,
-        model=model,
-        temperature=temperature,
-        max_tokens=max_tokens,
-        system_prompt=system_template,
-        user_prompt=user_prompt,
-        response_model=ReleaseNotes,
-    )
+    try:
+        return generate_structured(
+            api_key=api_key,
+            model=model,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            system_prompt=system_template,
+            user_prompt=user_prompt,
+            response_model=ReleaseNotes,
+        )
+    except ImportError:
+        # If AI libs are not available, return a non-AI draft for graceful degradation
+        highlights = [c.get("message", "") for c in commits[:5] if c.get("message")]
+        summary = f"Release notes draft for {current_version} (prev: {previous_version})"
+        rn = _RNFallback(
+            summary=summary,
+            highlights=highlights,
+            sections=[],
+            breaking_changes=[],
+            limitations=[],
+        )
+        return rn

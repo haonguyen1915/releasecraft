@@ -43,12 +43,43 @@ class ChangelogConfig:
 
 
 @dataclass
+class CommitLintConfig:
+    enabled: bool = True
+    types: List[str] = field(
+        default_factory=lambda: [
+            "feat",
+            "fix",
+            "docs",
+            "chore",
+            "refactor",
+            "perf",
+            "test",
+            "build",
+            "ci",
+            "revert",
+            "style",
+        ]
+    )
+    require_scope: bool = False
+    scopes: List[str] = field(default_factory=list)
+    scope_pattern: Optional[str] = None
+    subject_max_length: int = 100
+    allow_bang: bool = True
+    allow_breaking_footer: bool = True
+    require_ticket: bool = False
+    ticket_pattern: Optional[str] = None
+    skip_merge_commits: bool = True
+    skip_revert_commits: bool = True
+
+
+@dataclass
 class AppConfig:
     project: ProjectConfig = field(default_factory=ProjectConfig)
     defaults: DefaultsConfig = field(default_factory=DefaultsConfig)
     pre_release: PreReleaseConfig = field(default_factory=PreReleaseConfig)
     bump_rules: BumpRulesConfig = field(default_factory=BumpRulesConfig)
     changelog: ChangelogConfig = field(default_factory=ChangelogConfig)
+    commit_lint: CommitLintConfig = field(default_factory=CommitLintConfig)
     # Safety options (e.g., allow dirty working tree)
     class SafetyConfig:
         allow_dirty: bool = False

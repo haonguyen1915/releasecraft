@@ -117,6 +117,37 @@ def _merge_into_config(cfg: AppConfig, data: Dict[str, Any]) -> None:
         if "fail_on_error" in ai:
             cfg.ai.fail_on_error = bool(ai.get("fail_on_error"))
 
+    # Commit lint block (optional)
+    cl = data.get("commit_lint", {}) or {}
+    if cl:
+        if "enabled" in cl:
+            cfg.commit_lint.enabled = bool(cl.get("enabled"))
+        if "types" in cl:
+            cfg.commit_lint.types = list(cl.get("types") or [])
+        if "require_scope" in cl:
+            cfg.commit_lint.require_scope = bool(cl.get("require_scope"))
+        if "scopes" in cl:
+            cfg.commit_lint.scopes = list(cl.get("scopes") or [])
+        if "scope_pattern" in cl:
+            cfg.commit_lint.scope_pattern = cl.get("scope_pattern") or None
+        if "subject_max_length" in cl:
+            try:
+                cfg.commit_lint.subject_max_length = int(cl.get("subject_max_length"))
+            except Exception:
+                pass
+        if "allow_bang" in cl:
+            cfg.commit_lint.allow_bang = bool(cl.get("allow_bang"))
+        if "allow_breaking_footer" in cl:
+            cfg.commit_lint.allow_breaking_footer = bool(cl.get("allow_breaking_footer"))
+        if "require_ticket" in cl:
+            cfg.commit_lint.require_ticket = bool(cl.get("require_ticket"))
+        if "ticket_pattern" in cl:
+            cfg.commit_lint.ticket_pattern = cl.get("ticket_pattern") or None
+        if "skip_merge_commits" in cl:
+            cfg.commit_lint.skip_merge_commits = bool(cl.get("skip_merge_commits"))
+        if "skip_revert_commits" in cl:
+            cfg.commit_lint.skip_revert_commits = bool(cl.get("skip_revert_commits"))
+
 
 def load_config(config_path: Optional[str] = None) -> AppConfig:
     """Load configuration with precedence: explicit path > repo > home > defaults.

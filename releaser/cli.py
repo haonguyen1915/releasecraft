@@ -55,6 +55,40 @@ def add_init_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--bump-block", type=str, help="CSV branches blocked from running bump")
 
 
+def add_cache_arguments(parser: argparse.ArgumentParser) -> None:
+    subparsers = parser.add_subparsers(dest="cache_action", help="Cache actions", metavar="ACTION")
+
+    # cache stats
+    stats_parser = subparsers.add_parser(
+        "stats",
+        help="Show cache statistics",
+        description="Display AI cache statistics (size, entries, location)",
+    )
+
+    # cache clear
+    clear_parser = subparsers.add_parser(
+        "clear",
+        help="Clear AI cache",
+        description="Remove cached AI-generated release notes",
+    )
+    clear_parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Skip confirmation prompt",
+    )
+    clear_parser.add_argument(
+        "--older-than",
+        type=int,
+        metavar="DAYS",
+        help="Only clear entries older than N days",
+    )
+    clear_parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Show detailed output",
+    )
+
+
 def create_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="releaser",
@@ -87,7 +121,24 @@ def create_parser() -> argparse.ArgumentParser:
     )
     add_init_arguments(init_parser)
 
-    # Keep CLI minimal: only bump and init are exposed here.
+    # Commit Lint
+    lint_parser = subparsers.add_parser(
+        "commit-lint",
+        help="Validate commit message against Conventional Commits",
+        description="Validate a commit message file or .git/COMMIT_EDITMSG using Conventional Commit rules.",
+    )
+    lint_parser.add_argument("files", nargs="*", help="Path to commit message file (from pre-commit)")
+    lint_parser.add_argument("--config", type=str, help="Path to config file (optional)")
+    lint_parser.add_argument("--format", choices=["text", "json"], default="text", help="Output format")
+
+    # Cache
+    cache_parser = subparsers.add_parser(
+        "cache",
+        help="Manage AI cache",
+        description="View statistics and clear cached AI-generated release notes",
+    )
+    add_cache_arguments(cache_parser)
+
     return parser
 
 
@@ -106,6 +157,80 @@ def handle_init_command(args: argparse.Namespace) -> int:
         return run_init(args)
     except Exception as e:
         logger.error(f"Init failed: {e}")
+        return 1
+
+
+def handle_cache_command(args: argparse.Namespace) -> int:
+    """Handle cache subcommands (stats, clear)."""
+    try:
+        from .ai.cache import get_cache_stats, clear_cache
+
+        # Check if action was specified
+        if not getattr(args, "cache_action", None):
+            logger.error("Please specify an action: 'stats' or 'clear'")
+            logger.info("Usage: releaser cache {stats|clear}")
+            return 1
+
+        if args.cache_action == "stats":
+            # Show cache statistics
+            stats = get_cache_stats()
+            console.print()
+            console.print("[bold cyan]AI Cache Statistics[/bold cyan]")
+            console.print(f"  Location: {stats['cache_dir']}")
+            console.print(f"  Total entries: {stats['total_entries']}")
+
+            # Format size nicely
+            size_bytes = stats["total_size_bytes"]
+            if size_bytes < 1024:
+                size_str = f"{size_bytes} B"
+            elif size_bytes < 1024 * 1024:
+                size_str = f"{size_bytes / 1024:.1f} KB"
+            else:
+                size_str = f"{size_bytes / (1024 * 1024):.1f} MB"
+
+            console.print(f"  Total size: {size_str}")
+            console.print()
+            return 0
+
+        elif args.cache_action == "clear":
+            # Clear cache
+            stats = get_cache_stats()
+
+            if stats["total_entries"] == 0:
+                logger.info("Cache is already empty")
+                return 0
+
+            # Show what will be deleted
+            if args.older_than:
+                logger.info(f"Clearing cache entries older than {args.older_than} days...")
+            else:
+                logger.info(f"Clearing all {stats['total_entries']} cache entries...")
+
+            # Confirm unless --force
+            if not args.force:
+                from .console import prompt_choice
+                choice = prompt_choice(
+                    "Are you sure?",
+                    ["Yes, clear cache", "No, cancel"]
+                )
+                if choice != "Yes, clear cache":
+                    logger.info("Cancelled")
+                    return 0
+
+            # Perform deletion
+            deleted = clear_cache(max_age_days=args.older_than)
+
+            if args.verbose:
+                logger.info(f"Successfully deleted {deleted} cache entries")
+
+            return 0
+
+        else:
+            logger.error(f"Unknown cache action: {args.cache_action}")
+            return 1
+
+    except Exception as e:
+        logger.error(f"Cache command failed: {e}")
         return 1
 
 
@@ -128,7 +253,15 @@ def main(argv: Optional[list[str]] = None) -> int:
         return handle_bump_command(args)
     if args.command == "init":
         return handle_init_command(args)
-    # Only bump and init supported here. Other utilities have dedicated entry points.
+    if args.command == "commit-lint":
+        try:
+            from .commit_lint import run as run_lint
+            return run_lint(args)
+        except Exception as e:
+            logger.error(f"Commit lint failed: {e}")
+            return 1
+    if args.command == "cache":
+        return handle_cache_command(args)
 
     logger.error(f"Unknown command: {args.command}")
     return 1
