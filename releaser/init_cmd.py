@@ -79,22 +79,40 @@ def run(args) -> int:
 
     if not yes:
         # Minimal interactive prompts only (keep CLI minimal, config full by default)
+        # Show defaults explicitly in the prompt text for clarity
         project_type = prompt_choice(
-            "Project type", ["auto", "poetry", "setuptools", "npm"], default=project_type
+            f"Project type [default: {project_type}]",
+            ["auto", "poetry", "setuptools", "npm"],
+            default=project_type,
         )
-        tag_prefix = prompt_input("Tag prefix", default=tag_prefix)
-        use_native = prompt_confirmation("Use native tooling when available?", default=True)
+        tag_prefix = prompt_input(
+            f"Tag prefix [default: {tag_prefix}]", default=tag_prefix
+        )
+        use_native = prompt_confirmation(
+            f"Use native tooling when available? [default: {'Yes' if True else 'No'}]",
+            default=True,
+        )
 
-        pre_enabled = prompt_confirmation("Enable pre-release?", default=True)
+        pre_enabled = prompt_confirmation(
+            f"Enable pre-release? [default: {'Yes' if True else 'No'}]", default=True
+        )
         if pre_enabled:
             pre_channel = prompt_choice(
-                "Default pre-release channel", ["alpha", "beta", "rc", "custom"], default=pre_channel
+                f"Default pre-release channel [default: {pre_channel}]",
+                ["alpha", "beta", "rc", "custom"],
+                default=pre_channel,
             )
             if pre_channel == "custom":
-                pre_channel = prompt_input("Enter custom channel", default="rc").strip() or "rc"
+                pre_channel = (
+                    prompt_input(
+                        "Enter custom channel [default: rc]", default="rc"
+                    ).strip()
+                    or "rc"
+                )
 
         files_str = prompt_input(
-            "Version file targets (comma, PATH:selector) [optional]", default=""
+            "Version file targets (comma, PATH:selector) [default: none]",
+            default="",
         ).strip()
         files_flag = _parse_csv_list(files_str)
 

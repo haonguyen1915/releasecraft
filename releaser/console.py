@@ -210,15 +210,18 @@ def prompt_choice(message: str, choices: list, default: Optional[str] = None) ->
     # Also allow full text match
     valid_inputs = list(number_to_choice.keys()) + choices
 
-    # Determine default display
+    # Determine default display - show value in prompt, use number as default
     default_display = None
+    prompt_text = message
     if default and default in choices:
         default_num = choices.index(default) + 1
         default_display = str(default_num)
+        # Add default value name to the message
+        prompt_text = f"{message} (default: {default})"
 
     # Prompt for input
     response = Prompt.ask(
-        message,
+        prompt_text,
         choices=valid_inputs,
         default=default_display,
         show_choices=False  # We already showed them above
