@@ -16,7 +16,7 @@ import subprocess
 from typing import Any, Dict, Optional, Union
 
 try:
-    import psutil
+    import psutil  # type: ignore[import-untyped]
 except ImportError:
     psutil = None
 
@@ -59,10 +59,10 @@ def parse_memory_size(value: Union[str, int, float, None]) -> Optional[int]:
     multipliers = {
         "B": 1,
         "KB": 1024,
-        "MB": 1024 ** 2,
-        "GB": 1024 ** 3,
-        "TB": 1024 ** 4,
-        "PB": 1024 ** 5,
+        "MB": 1024**2,
+        "GB": 1024**3,
+        "TB": 1024**4,
+        "PB": 1024**5,
     }
     return int(number * multipliers.get(unit, 1))
 
@@ -70,7 +70,7 @@ def parse_memory_size(value: Union[str, int, float, None]) -> Optional[int]:
 def _read_cgroup_value(path: str) -> Optional[int]:
     """Read integer value from cgroup file."""
     try:
-        with open(path, "r") as f:
+        with open(path, "r", encoding="utf-8") as f:
             content = f.read().strip()
             if content.lower() == "max":
                 return None
@@ -83,7 +83,7 @@ def detect_cpu_limit() -> Optional[float]:
     """Detect CPU limit from cgroups or system."""
     # Try cgroup v2 first
     try:
-        with open("/sys/fs/cgroup/cpu.max", "r") as f:
+        with open("/sys/fs/cgroup/cpu.max", "r", encoding="utf-8") as f:
             parts = f.read().strip().split()
             if len(parts) >= 2 and parts[0] != "max":
                 quota = float(parts[0])

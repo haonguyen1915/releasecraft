@@ -5,7 +5,6 @@ Run with: pytest tests/ai/test_engine_integration.py -v -s
 """
 
 import os
-from pathlib import Path
 
 import pytest
 
@@ -16,7 +15,7 @@ from releaser.ai.schemas import ReleaseNotes
 # Skip all tests in this module if API key is not available
 pytestmark = pytest.mark.skipif(
     not os.getenv("OPENAI_API_KEY"),
-    reason="OPENAI_API_KEY not set - skipping integration tests"
+    reason="OPENAI_API_KEY not set - skipping integration tests",
 )
 
 
@@ -28,31 +27,31 @@ def sample_commits():
             "hash": "abc123def456789",
             "message": "feat: add AI-powered release notes generation",
             "author": "Jane Doe <jane@example.com>",
-            "date": "2024-01-15"
+            "date": "2024-01-15",
         },
         {
             "hash": "def456abc123456",
             "message": "fix!: resolve critical security vulnerability in authentication",
             "author": "John Smith <john@example.com>",
-            "date": "2024-01-14"
+            "date": "2024-01-14",
         },
         {
             "hash": "789abc456def123",
             "message": "feat: implement template-based prompt system with Jinja2",
             "author": "Alice Johnson <alice@example.com>",
-            "date": "2024-01-13"
+            "date": "2024-01-13",
         },
         {
             "hash": "456def789abc012",
             "message": "docs: update README with AI configuration examples",
             "author": "Bob Wilson <bob@example.com>",
-            "date": "2024-01-12"
+            "date": "2024-01-12",
         },
         {
             "hash": "012abc345def678",
             "message": "refactor: improve error handling in template loader",
             "author": "Charlie Brown <charlie@example.com>",
-            "date": "2024-01-11"
+            "date": "2024-01-11",
         },
     ]
 
@@ -91,7 +90,7 @@ index abcdefg..1234567 100644
 +    system_prompt_file: str | None = None,
 +    user_prompt_file: str | None = None,
 +) -> ReleaseNotes:
-"""
+""",
     }
 
 
@@ -99,9 +98,9 @@ def test_generate_release_notes_real_api(sample_commits):
     """Test release notes generation with real OpenAI API (no diffs)."""
     api_key = os.getenv("OPENAI_API_KEY")
 
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("Testing with real OpenAI API (commits only)")
-    print("="*80)
+    print("=" * 80)
 
     notes = generate_release_notes(
         api_key=api_key,
@@ -143,25 +142,29 @@ def test_generate_release_notes_real_api(sample_commits):
     markdown = notes.to_markdown()
     assert len(markdown) > 0, "Markdown output should not be empty"
 
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("Generated Markdown:")
-    print("="*80)
+    print("=" * 80)
     print(markdown)
-    print("="*80)
+    print("=" * 80)
 
     # Verify structure
-    assert notes.breaking_changes is not None, "Should identify breaking changes from fix! commit"
+    assert (
+        notes.breaking_changes is not None
+    ), "Should identify breaking changes from fix! commit"
     if notes.breaking_changes:
-        assert len(notes.breaking_changes) > 0, "Should have at least one breaking change"
+        assert (
+            len(notes.breaking_changes) > 0
+        ), "Should have at least one breaking change"
 
 
 def test_generate_release_notes_with_diffs(sample_commits, sample_diffs):
     """Test release notes generation with real OpenAI API (with diffs)."""
     api_key = os.getenv("OPENAI_API_KEY")
 
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("Testing with real OpenAI API (commits + diffs)")
-    print("="*80)
+    print("=" * 80)
 
     notes = generate_release_notes(
         api_key=api_key,
@@ -198,19 +201,21 @@ def test_generate_release_notes_with_diffs(sample_commits, sample_diffs):
     # Generate markdown
     markdown = notes.to_markdown()
 
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("Generated Markdown (with diffs):")
-    print("="*80)
+    print("=" * 80)
     print(markdown)
-    print("="*80)
+    print("=" * 80)
 
     # Verify breaking changes were identified
     assert notes.breaking_changes is not None
     if notes.breaking_changes:
         # Should mention security or authentication since we have a security fix
         breaking_text = " ".join(notes.breaking_changes).lower()
-        assert any(word in breaking_text for word in ["security", "authentication", "token", "hash"]), \
-            "Breaking changes should mention security-related changes"
+        assert any(
+            word in breaking_text
+            for word in ["security", "authentication", "token", "hash"]
+        ), "Breaking changes should mention security-related changes"
 
 
 def test_generate_release_notes_custom_model(sample_commits):
@@ -231,11 +236,11 @@ def test_generate_release_notes_custom_model(sample_commits):
     assert isinstance(notes, ReleaseNotes)
     assert notes.summary is not None
 
-    print("\n" + "="*80)
-    print(f"Model: gpt-4o-mini, Temperature: 0.1")
-    print("="*80)
+    print("\n" + "=" * 80)
+    print("Model: gpt-4o-mini, Temperature: 0.1")
+    print("=" * 80)
     print(notes.to_markdown())
-    print("="*80)
+    print("=" * 80)
 
 
 def test_generate_release_notes_high_temperature(sample_commits):
@@ -255,11 +260,11 @@ def test_generate_release_notes_high_temperature(sample_commits):
     assert isinstance(notes, ReleaseNotes)
     assert notes.summary is not None
 
-    print("\n" + "="*80)
-    print(f"Model: gpt-4o-mini, Temperature: 0.7 (creative)")
-    print("="*80)
+    print("\n" + "=" * 80)
+    print("Model: gpt-4o-mini, Temperature: 0.7 (creative)")
+    print("=" * 80)
     print(notes.to_markdown())
-    print("="*80)
+    print("=" * 80)
 
 
 @pytest.mark.parametrize("max_tokens", [500, 1000, 1500])

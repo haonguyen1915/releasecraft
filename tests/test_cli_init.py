@@ -1,4 +1,3 @@
-from pathlib import Path
 import toml
 
 from releaser.cli import main as cli_main
@@ -56,6 +55,6 @@ def test_cli_init_non_interactive(tmp_path, monkeypatch):
     assert set(pr.get("block", [])) == {"main", "master"}
 
     # Test bump_rules (if added by init command)
-    br = data.get("bump_rules", {})
+    _br = data.get("bump_rules", {})
     # Note: bump_rules might not be in generated config since it's not common
     # Just check it exists or skip if not present

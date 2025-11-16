@@ -48,7 +48,6 @@ dev = [
 [project.scripts]
 releaser = "releaser.cli:main"
 release-drafter = "releaser.drafter.release_generator:main"
-release-greeting = "releaser.greeting:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
@@ -100,6 +99,75 @@ warn_unused_ignores = true
 warn_no_return = true
 warn_unreachable = true
 strict_equality = true
+
+[tool.flake8]
+max-line-length = 100
+extend-ignore = [
+    "E203",  # whitespace before ':' (black compatibility)
+    "W503",  # line break before binary operator
+    "E501",  # line too long
+    "E402",  # module import not at top (for lazy imports)
+]
+exclude = [
+  ".git",
+  "__pycache__",
+  "build",
+  "dist",
+  ".venv",
+  ".pytest_cache",
+]
+
+[tool.pylint.main]
+jobs = 1
+persistent = false
+extension-pkg-whitelist = ""
+ignore-patterns = ["tests/.*"]
+
+[tool.pylint.messages_control]
+disable = [
+  "missing-module-docstring",
+  "missing-class-docstring",
+  "missing-function-docstring",
+  "line-too-long",
+  "import-outside-toplevel",
+  "unused-argument",
+  "unused-variable",
+  "too-many-locals",
+  "too-many-statements",
+  "too-many-arguments",
+  "too-many-branches",
+  "too-many-instance-attributes",
+  "too-many-positional-arguments",
+  "too-many-nested-blocks",
+  "broad-exception-caught",
+  "broad-exception-raised",
+  "invalid-name",
+  "import-error",
+  # Style and complexity warnings
+  "no-else-return",
+  "too-many-return-statements",
+  "too-few-public-methods",
+  "duplicate-code",
+  # Code quality suggestions
+  "logging-fstring-interpolation",
+  "consider-using-with",
+  "unnecessary-comprehension",
+  "using-constant-test",
+  "raise-missing-from",
+  "consider-using-sys-exit",
+  # Import warnings
+  "reimported",
+  "wrong-import-order",
+  "cyclic-import",
+  "redefined-outer-name",
+  # Subprocess and file handling
+  "subprocess-run-check",
+  "unspecified-encoding",
+  # Other warnings
+  "arguments-differ",
+  "possibly-unused-variable",
+  "no-member",
+]
 
 [[tool.mypy.overrides]]
 module = [

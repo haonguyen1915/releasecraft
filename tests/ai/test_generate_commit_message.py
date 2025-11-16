@@ -1,7 +1,3 @@
-import os
-
-import pytest
-
 from releaser.ai.engine.openai_instructor import generate_commit_message
 from releaser.ai.schemas import CommitMessage
 
@@ -50,5 +46,9 @@ def test_generate_commit_message_no_scope_flag():
     # scope should be None and header should not include parentheses
     assert cm.scope is None
     header = cm.to_text().splitlines()[0]
-    assert header.startswith("chore:") or header.startswith("feat:") or header.startswith("fix:")
+    assert (
+        header.startswith("chore:")
+        or header.startswith("feat:")
+        or header.startswith("fix:")
+    )
     assert "(" not in header

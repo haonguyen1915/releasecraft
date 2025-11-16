@@ -1,6 +1,3 @@
-import os
-from pathlib import Path
-
 from releaser.config.load import load_config
 
 

@@ -1,5 +1,4 @@
 from types import SimpleNamespace
-from pathlib import Path
 
 from releaser.bump.flow import run as run_bump
 
@@ -19,7 +18,9 @@ version = "0.1.0"
     # Simulate git repo and dirty tree
     (tmp_path / ".git").mkdir()
     monkeypatch.setattr("releaser.bump.flow.git_utils.is_git_repository", lambda: True)
-    monkeypatch.setattr("releaser.bump.flow.git_utils.has_uncommitted_changes", lambda: True)
+    monkeypatch.setattr(
+        "releaser.bump.flow.git_utils.has_uncommitted_changes", lambda: True
+    )
 
     args = SimpleNamespace(
         manual="0.2.0",

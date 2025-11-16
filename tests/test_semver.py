@@ -17,9 +17,12 @@ def test_semver_bump_base():
 
 def test_semver_apply_prerelease_increment():
     # Start pre-release sequence
-    v1 = semver.apply_prerelease("1.2.3", previous_version=None, channel="rc", auto_increment=True)
+    v1 = semver.apply_prerelease(
+        "1.2.3", previous_version=None, channel="rc", auto_increment=True
+    )
     assert v1 == "1.2.3-rc.1"
     # Continue sequence
-    v2 = semver.apply_prerelease("1.2.3", previous_version=v1, channel="rc", auto_increment=True)
+    v2 = semver.apply_prerelease(
+        "1.2.3", previous_version=v1, channel="rc", auto_increment=True
+    )
     assert v2 == "1.2.3-rc.2"
-

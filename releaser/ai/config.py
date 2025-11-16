@@ -41,18 +41,30 @@ class AiConfig:
         return AiConfig(
             # From release.auto_gen_notes
             enabled=getattr(auto_gen, "enabled", False) if auto_gen else False,
-            include_diff=getattr(auto_gen, "include_diff", False) if auto_gen else False,
-            always_diff_types=list(getattr(auto_gen, "always_diff_types", []) or []) if auto_gen else [],
+            include_diff=getattr(auto_gen, "include_diff", False)
+            if auto_gen
+            else False,
+            always_diff_types=list(getattr(auto_gen, "always_diff_types", []) or [])
+            if auto_gen
+            else [],
             max_commits=getattr(auto_gen, "max_commits", 200) if auto_gen else 200,
             # From llm
             provider=getattr(llm, "provider", "openai") if llm else "openai",
             model=getattr(llm, "model", "gpt-4o-mini") if llm else "gpt-4o-mini",
-            api_key_env=getattr(llm, "api_key_env", "OPENAI_API_KEY") if llm else "OPENAI_API_KEY",
+            api_key_env=getattr(llm, "api_key_env", "OPENAI_API_KEY")
+            if llm
+            else "OPENAI_API_KEY",
             temperature=getattr(llm, "temperature", 0.2) if llm else 0.2,
             max_tokens=getattr(llm, "max_tokens", 800) if llm else 800,
             cache=getattr(llm, "cache", True) if llm else True,
-            accept_automatically=getattr(llm, "accept_automatically", False) if llm else False,
+            accept_automatically=getattr(llm, "accept_automatically", False)
+            if llm
+            else False,
             fail_on_error=getattr(llm, "fail_on_error", False) if llm else False,
-            prompt_release_notes_file=getattr(llm, "prompt_release_notes_file", None) if llm else None,
-            system_prompt_file=getattr(llm, "system_prompt_file", None) if llm else None,
+            prompt_release_notes_file=getattr(llm, "prompt_release_notes_file", None)
+            if llm
+            else None,
+            system_prompt_file=getattr(llm, "system_prompt_file", None)
+            if llm
+            else None,
         )

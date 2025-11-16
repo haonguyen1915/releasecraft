@@ -1,6 +1,6 @@
 """Tests for cache CLI commands."""
 
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 import argparse
 
 import pytest
@@ -11,9 +11,9 @@ from releaser.cli import handle_cache_command
 @pytest.fixture
 def mock_cache_functions():
     """Mock cache functions."""
-    with patch("releaser.ai.cache.get_cache_stats") as mock_stats, \
-         patch("releaser.ai.cache.clear_cache") as mock_clear:
-
+    with patch("releaser.ai.cache.get_cache_stats") as mock_stats, patch(
+        "releaser.ai.cache.clear_cache"
+    ) as mock_clear:
         # Default cache stats
         mock_stats.return_value = {
             "total_entries": 5,

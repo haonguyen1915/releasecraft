@@ -17,7 +17,9 @@ class Violation:
     message: str
 
 
-HEADER_RE_TEMPLATE = r"^(?P<type>{types})(?:\((?P<scope>[^)]+)\))?(?P<bang>!)?: (?P<subject>.+)$"
+HEADER_RE_TEMPLATE = (
+    r"^(?P<type>{types})(?:\((?P<scope>[^)]+)\))?(?P<bang>!)?: (?P<subject>.+)$"
+)
 
 
 def _read_commit_message(path: Optional[str]) -> str:
@@ -45,16 +47,22 @@ def _compile_header_regex(types: List[str]) -> re.Pattern[str]:
     return re.compile(pattern)
 
 
-def _validate_scope(scope: Optional[str], require: bool, allowed: List[str], pattern: Optional[str]) -> Optional[Violation]:
+def _validate_scope(
+    scope: Optional[str], require: bool, allowed: List[str], pattern: Optional[str]
+) -> Optional[Violation]:
     if require and not scope:
         return Violation("scope.required", "Scope is required: type(scope): subject")
     if not scope:
         return None
     if allowed and scope not in allowed:
-        return Violation("scope.allowed", f"Scope '{scope}' not in allowed list: {allowed}")
+        return Violation(
+            "scope.allowed", f"Scope '{scope}' not in allowed list: {allowed}"
+        )
     if pattern:
         if not re.fullmatch(pattern, scope or ""):
-            return Violation("scope.pattern", f"Scope '{scope}' does not match pattern: {pattern}")
+            return Violation(
+                "scope.pattern", f"Scope '{scope}' does not match pattern: {pattern}"
+            )
     return None
 
 
@@ -89,14 +97,16 @@ def validate_commit_message(msg: str) -> List[Violation]:
         )
         return violations
 
-    typ = m.group("type")
+    _typ = m.group("type")
     scope = m.group("scope")
     bang = bool(m.group("bang"))
     subject = m.group("subject") or ""
 
     # Bang handling
     if bang and not c.allow_bang:
-        violations.append(Violation("bang.disallowed", "'!' breaking indicator is not allowed"))
+        violations.append(
+            Violation("bang.disallowed", "'!' breaking indicator is not allowed")
+        )
 
     # Scope rules
     v = _validate_scope(scope, c.require_scope, c.scopes, c.scope_pattern)
@@ -105,10 +115,15 @@ def validate_commit_message(msg: str) -> List[Violation]:
 
     # Subject rules
     if not subject or subject.strip() == "":
-        violations.append(Violation("subject.required", "Subject must not be empty after colon"))
+        violations.append(
+            Violation("subject.required", "Subject must not be empty after colon")
+        )
     if len(subject) > max(1, int(c.subject_max_length)):
         violations.append(
-            Violation("subject.length", f"Subject too long ({len(subject)} > {c.subject_max_length})")
+            Violation(
+                "subject.length",
+                f"Subject too long ({len(subject)} > {c.subject_max_length})",
+            )
         )
 
     # Ticket requirement
@@ -116,8 +131,14 @@ def validate_commit_message(msg: str) -> List[Violation]:
         violations.append(Violation("ticket.required", "Ticket reference not found"))
 
     # Breaking change footer: allowed when present; we don't enforce its presence
-    if not c.allow_breaking_footer and ("BREAKING CHANGE:" in body or "BREAKING-CHANGE:" in body):
-        violations.append(Violation("breaking_footer.disallowed", "'BREAKING CHANGE' footer is not allowed"))
+    if not c.allow_breaking_footer and (
+        "BREAKING CHANGE:" in body or "BREAKING-CHANGE:" in body
+    ):
+        violations.append(
+            Violation(
+                "breaking_footer.disallowed", "'BREAKING CHANGE' footer is not allowed"
+            )
+        )
 
     return violations
 
@@ -163,4 +184,3 @@ def run(args: argparse.Namespace) -> int:
             "Expected format: type[(scope)][!]: subject — e.g., 'feat(api): add search endpoint'"
         )
     return 1
-

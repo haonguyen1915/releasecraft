@@ -42,6 +42,7 @@ def _import_clients() -> tuple[Any, Any]:
 
     return _instructor, _OpenAI
 
+
 T = TypeVar("T", bound=BaseModel)
 
 
@@ -103,7 +104,9 @@ def generate_structured(
         try:
             return response_model()  # type: ignore[call-arg]
         except Exception as exc:
-            raise TypeError("Could not parse structured response into the response_model") from exc
+            raise TypeError(
+                "Could not parse structured response into the response_model"
+            ) from exc
 
 
 DEFAULT_SYSTEM_PROMPT_RELEASE_NOTES = (
@@ -191,6 +194,7 @@ def _infer_cc_from_heuristics(
     """
     diffs = diffs or {}
     lowered = [f.lower() for f in files]
+
     # Type heuristics
     def only(exts=None, prefixes=None):
         exts = exts or []
@@ -201,7 +205,11 @@ def _infer_cc_from_heuristics(
             for f in lowered
         )
 
-    if files and only(exts=[".md", ".rst"]) or all(f.startswith("docs/") for f in lowered):
+    if (
+        files
+        and only(exts=[".md", ".rst"])
+        or all(f.startswith("docs/") for f in lowered)
+    ):
         ctype = "docs"
         subject = "update documentation"
     elif files and all(f.startswith("tests/") for f in lowered):
@@ -300,7 +308,9 @@ def generate_commit_message(
     """
     # AI unavailable: heuristics
     if not api_key:
-        cm = _infer_cc_from_heuristics(files=files, diffs=diffs, allow_scope=allow_scope)
+        cm = _infer_cc_from_heuristics(
+            files=files, diffs=diffs, allow_scope=allow_scope
+        )
         if demote_feat_if_similar:
             cm = _maybe_demote_feat(cm, diffs, recent_subjects)
         if ticket:
@@ -356,7 +366,9 @@ def generate_commit_message(
         return cm
     except ImportError:
         # As a last resort
-        cm = _infer_cc_from_heuristics(files=files, diffs=diffs, allow_scope=allow_scope)
+        cm = _infer_cc_from_heuristics(
+            files=files, diffs=diffs, allow_scope=allow_scope
+        )
         if demote_feat_if_similar:
             cm = _maybe_demote_feat(cm, diffs, recent_subjects)
         if ticket:
@@ -442,7 +454,9 @@ def generate_release_notes(
             raise ValueError("API key is required for AI release notes generation")
         # Fallback: construct minimal release notes without calling AI
         highlights = [c.get("message", "") for c in commits[:5] if c.get("message")]
-        summary = f"Release notes draft for {current_version} (prev: {previous_version})"
+        summary = (
+            f"Release notes draft for {current_version} (prev: {previous_version})"
+        )
         rn = _RNFallback(
             summary=summary,
             highlights=highlights,
@@ -457,6 +471,7 @@ def generate_release_notes(
         try:
             from releaser.config.load import load_config  # type: ignore
             from releaser.ai.config import AiConfig  # type: ignore
+
             _cfg = load_config()
             _ai = AiConfig.from_app_config(_cfg)
         except Exception:
@@ -469,7 +484,7 @@ def generate_release_notes(
             always_diff_types = list(getattr(_ai, "always_diff_types", []) or [])
 
     # Limit commits per max_commits (most recent first as provided)
-    commits_limited = commits[: max_commits] if max_commits else commits
+    commits_limited = commits[:max_commits] if max_commits else commits
 
     # Filter diffs by include_diff and always_diff_types
     def _ctype(msg: str) -> str:
@@ -517,7 +532,9 @@ def generate_release_notes(
         )
     except ImportError:
         # Fallback rendering without Jinja2
-        commit_lines = "\n".join(f"- {c.get('message','')} ({c.get('hash','')[:7]})" for c in commits_limited)
+        commit_lines = "\n".join(
+            f"- {c.get('message','')} ({c.get('hash','')[:7]})" for c in commits_limited
+        )
         user_prompt = (
             f"Target version: {current_version}\nPrevious version: {previous_version}\n\n"
             f"Commits since last release:\n{commit_lines}\n\n"
@@ -538,7 +555,9 @@ def generate_release_notes(
     except ImportError:
         # If AI libs are not available, return a non-AI draft for graceful degradation
         highlights = [c.get("message", "") for c in commits[:5] if c.get("message")]
-        summary = f"Release notes draft for {current_version} (prev: {previous_version})"
+        summary = (
+            f"Release notes draft for {current_version} (prev: {previous_version})"
+        )
         rn = _RNFallback(
             summary=summary,
             highlights=highlights,

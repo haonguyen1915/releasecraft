@@ -1,8 +1,7 @@
 """Tests for AI data collector module."""
 
 import subprocess
-from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 import pytest
 
@@ -26,31 +25,31 @@ def sample_commits():
             "hash": "abc123def456",
             "message": "feat: add new feature",
             "author": "Jane Doe <jane@example.com>",
-            "date": "2024-01-15"
+            "date": "2024-01-15",
         },
         {
             "hash": "def456abc123",
             "message": "fix!: resolve critical security issue",
             "author": "John Smith <john@example.com>",
-            "date": "2024-01-14"
+            "date": "2024-01-14",
         },
         {
             "hash": "789abc456def",
             "message": "update dependencies",  # No conventional prefix
             "author": "Alice Johnson <alice@example.com>",
-            "date": "2024-01-13"
+            "date": "2024-01-13",
         },
         {
             "hash": "456def789abc",
             "message": "docs: update README",
             "author": "Bob Wilson <bob@example.com>",
-            "date": "2024-01-12"
+            "date": "2024-01-12",
         },
         {
             "hash": "012abc345def",
             "message": "fix: resolve security vulnerability in auth",
             "author": "Charlie Brown <charlie@example.com>",
-            "date": "2024-01-11"
+            "date": "2024-01-11",
         },
     ]
 
@@ -110,7 +109,9 @@ def test_identify_important_commits_breaking_changes(sample_commits):
     important = identify_important_commits(sample_commits)
 
     # Should include the fix! commit
-    breaking_hashes = [c["hash"] for c in important if "!" in c["message"].split(":")[0]]
+    breaking_hashes = [
+        c["hash"] for c in important if "!" in c["message"].split(":")[0]
+    ]
     assert "def456abc123" in breaking_hashes
 
 
@@ -120,7 +121,8 @@ def test_identify_important_commits_security(sample_commits):
 
     # Should include commits with security keywords
     security_hashes = [
-        c["hash"] for c in important
+        c["hash"]
+        for c in important
         if "security" in c["message"].lower() or "vulnerability" in c["message"].lower()
     ]
     assert "def456abc123" in security_hashes  # fix! with security
@@ -143,13 +145,13 @@ def test_identify_important_commits_filters_clear_messages():
             "hash": "abc123",
             "message": "feat: add comprehensive OAuth2 authentication system",
             "author": "Dev",
-            "date": "2024-01-01"
+            "date": "2024-01-01",
         },
         {
             "hash": "def456",
             "message": "docs: add API documentation with examples",
             "author": "Dev",
-            "date": "2024-01-01"
+            "date": "2024-01-01",
         },
     ]
 
@@ -166,13 +168,13 @@ def test_identify_important_commits_vague_messages():
             "hash": "abc123",
             "message": "feat: update",  # Vague
             "author": "Dev",
-            "date": "2024-01-01"
+            "date": "2024-01-01",
         },
         {
             "hash": "def456",
             "message": "fix: changes",  # Vague
             "author": "Dev",
-            "date": "2024-01-01"
+            "date": "2024-01-01",
         },
     ]
 
@@ -265,11 +267,10 @@ def test_get_commit_log_success(tmp_path, monkeypatch):
 
 def test_get_commit_log_git_error(tmp_path, monkeypatch):
     """Test handling of git command errors."""
+
     def mock_run(*args, **kwargs):
         raise subprocess.CalledProcessError(
-            returncode=128,
-            cmd=["git", "log"],
-            stderr="fatal: bad revision"
+            returncode=128, cmd=["git", "log"], stderr="fatal: bad revision"
         )
 
     monkeypatch.setattr(subprocess, "run", mock_run)
@@ -337,11 +338,10 @@ def test_get_commit_diff_truncation(tmp_path, monkeypatch):
 
 def test_get_commit_diff_git_error(tmp_path, monkeypatch):
     """Test handling of git show errors."""
+
     def mock_run(*args, **kwargs):
         raise subprocess.CalledProcessError(
-            returncode=128,
-            cmd=["git", "show"],
-            stderr="fatal: bad object"
+            returncode=128, cmd=["git", "show"], stderr="fatal: bad object"
         )
 
     monkeypatch.setattr(subprocess, "run", mock_run)
@@ -446,9 +446,7 @@ def test_collect_commits_and_diffs_handles_diff_errors(tmp_path, monkeypatch):
         else:
             # Git show fails
             raise subprocess.CalledProcessError(
-                returncode=128,
-                cmd=["git", "show"],
-                stderr="error"
+                returncode=128, cmd=["git", "show"], stderr="error"
             )
 
         call_count[0] += 1
@@ -468,12 +466,28 @@ def test_collect_commits_and_diffs_handles_diff_errors(tmp_path, monkeypatch):
     assert len(data["commits"]) == 1
     assert len(data["diffs"]) == 0  # Diff failed but didn't crash
 
+
 def test_identify_important_commits_with_always_diff_types_feat():
     """Test always_diff_types configuration for feat commits."""
     commits = [
-        {"hash": "abc", "message": "feat: add new feature", "author": "Dev", "date": "2024-01-01"},
-        {"hash": "def", "message": "fix: resolve bug in parser", "author": "Dev", "date": "2024-01-02"},
-        {"hash": "ghi", "message": "docs: add API documentation", "author": "Dev", "date": "2024-01-03"},
+        {
+            "hash": "abc",
+            "message": "feat: add new feature",
+            "author": "Dev",
+            "date": "2024-01-01",
+        },
+        {
+            "hash": "def",
+            "message": "fix: resolve bug in parser",
+            "author": "Dev",
+            "date": "2024-01-02",
+        },
+        {
+            "hash": "ghi",
+            "message": "docs: add API documentation",
+            "author": "Dev",
+            "date": "2024-01-03",
+        },
     ]
 
     # Without config, only unclear commits selected by heuristics
@@ -489,14 +503,36 @@ def test_identify_important_commits_with_always_diff_types_feat():
 def test_identify_important_commits_with_always_diff_types_multiple():
     """Test always_diff_types with multiple types."""
     commits = [
-        {"hash": "abc", "message": "feat: add user authentication", "author": "Dev", "date": "2024-01-01"},
-        {"hash": "def", "message": "fix: resolve memory leak in cache", "author": "Dev", "date": "2024-01-02"},
-        {"hash": "ghi", "message": "perf: optimize database queries", "author": "Dev", "date": "2024-01-03"},
-        {"hash": "jkl", "message": "docs: add installation guide", "author": "Dev", "date": "2024-01-04"},
+        {
+            "hash": "abc",
+            "message": "feat: add user authentication",
+            "author": "Dev",
+            "date": "2024-01-01",
+        },
+        {
+            "hash": "def",
+            "message": "fix: resolve memory leak in cache",
+            "author": "Dev",
+            "date": "2024-01-02",
+        },
+        {
+            "hash": "ghi",
+            "message": "perf: optimize database queries",
+            "author": "Dev",
+            "date": "2024-01-03",
+        },
+        {
+            "hash": "jkl",
+            "message": "docs: add installation guide",
+            "author": "Dev",
+            "date": "2024-01-04",
+        },
     ]
 
-    important = identify_important_commits(commits, always_diff_types=["feat", "fix", "perf"])
-    
+    important = identify_important_commits(
+        commits, always_diff_types=["feat", "fix", "perf"]
+    )
+
     assert len(important) == 3
     hashes = [c["hash"] for c in important]
     assert "abc" in hashes  # feat
@@ -508,13 +544,28 @@ def test_identify_important_commits_with_always_diff_types_multiple():
 def test_identify_important_commits_with_always_diff_types_breaking():
     """Test always_diff_types with special 'breaking' type."""
     commits = [
-        {"hash": "abc", "message": "feat!: breaking change", "author": "Dev", "date": "2024-01-01"},
-        {"hash": "def", "message": "fix: BREAKING CHANGE: major update", "author": "Dev", "date": "2024-01-02"},
-        {"hash": "ghi", "message": "feat: normal feature", "author": "Dev", "date": "2024-01-03"},
+        {
+            "hash": "abc",
+            "message": "feat!: breaking change",
+            "author": "Dev",
+            "date": "2024-01-01",
+        },
+        {
+            "hash": "def",
+            "message": "fix: BREAKING CHANGE: major update",
+            "author": "Dev",
+            "date": "2024-01-02",
+        },
+        {
+            "hash": "ghi",
+            "message": "feat: normal feature",
+            "author": "Dev",
+            "date": "2024-01-03",
+        },
     ]
 
     important = identify_important_commits(commits, always_diff_types=["breaking"])
-    
+
     assert len(important) == 2
     hashes = [c["hash"] for c in important]
     assert "abc" in hashes  # feat!
@@ -525,13 +576,28 @@ def test_identify_important_commits_with_always_diff_types_breaking():
 def test_identify_important_commits_with_always_diff_types_security():
     """Test always_diff_types with special 'security' type."""
     commits = [
-        {"hash": "abc", "message": "fix: resolve security vulnerability", "author": "Dev", "date": "2024-01-01"},
-        {"hash": "def", "message": "feat: add feature with CVE fix", "author": "Dev", "date": "2024-01-02"},
-        {"hash": "ghi", "message": "fix: normal bug fix", "author": "Dev", "date": "2024-01-03"},
+        {
+            "hash": "abc",
+            "message": "fix: resolve security vulnerability",
+            "author": "Dev",
+            "date": "2024-01-01",
+        },
+        {
+            "hash": "def",
+            "message": "feat: add feature with CVE fix",
+            "author": "Dev",
+            "date": "2024-01-02",
+        },
+        {
+            "hash": "ghi",
+            "message": "fix: normal bug fix",
+            "author": "Dev",
+            "date": "2024-01-03",
+        },
     ]
 
     important = identify_important_commits(commits, always_diff_types=["security"])
-    
+
     assert len(important) == 2
     hashes = [c["hash"] for c in important]
     assert "abc" in hashes  # security keyword
@@ -542,13 +608,28 @@ def test_identify_important_commits_with_always_diff_types_security():
 def test_identify_important_commits_with_scoped_commits():
     """Test always_diff_types with scoped commits like feat(api):."""
     commits = [
-        {"hash": "abc", "message": "feat(api): add endpoint", "author": "Dev", "date": "2024-01-01"},
-        {"hash": "def", "message": "fix(auth): resolve login issue", "author": "Dev", "date": "2024-01-02"},
-        {"hash": "ghi", "message": "docs(readme): add usage examples", "author": "Dev", "date": "2024-01-03"},
+        {
+            "hash": "abc",
+            "message": "feat(api): add endpoint",
+            "author": "Dev",
+            "date": "2024-01-01",
+        },
+        {
+            "hash": "def",
+            "message": "fix(auth): resolve login issue",
+            "author": "Dev",
+            "date": "2024-01-02",
+        },
+        {
+            "hash": "ghi",
+            "message": "docs(readme): add usage examples",
+            "author": "Dev",
+            "date": "2024-01-03",
+        },
     ]
 
     important = identify_important_commits(commits, always_diff_types=["feat", "fix"])
-    
+
     assert len(important) == 2
     hashes = [c["hash"] for c in important]
     assert "abc" in hashes  # feat(api)
@@ -559,27 +640,52 @@ def test_identify_important_commits_with_scoped_commits():
 def test_identify_important_commits_case_insensitive():
     """Test that always_diff_types is case-insensitive."""
     commits = [
-        {"hash": "abc", "message": "feat: add feature", "author": "Dev", "date": "2024-01-01"},
-        {"hash": "def", "message": "FIX: resolve bug", "author": "Dev", "date": "2024-01-02"},
+        {
+            "hash": "abc",
+            "message": "feat: add feature",
+            "author": "Dev",
+            "date": "2024-01-01",
+        },
+        {
+            "hash": "def",
+            "message": "FIX: resolve bug",
+            "author": "Dev",
+            "date": "2024-01-02",
+        },
     ]
 
     # Test with uppercase config
     important = identify_important_commits(commits, always_diff_types=["FEAT", "FIX"])
-    
+
     assert len(important) == 2  # Should match both despite case mismatch
 
 
 def test_identify_important_commits_heuristics_still_apply():
     """Test that heuristics still apply even with always_diff_types set."""
     commits = [
-        {"hash": "abc", "message": "feat: add feature", "author": "Dev", "date": "2024-01-01"},
-        {"hash": "def", "message": "fix!: breaking fix", "author": "Dev", "date": "2024-01-02"},
-        {"hash": "ghi", "message": "update things", "author": "Dev", "date": "2024-01-03"},  # Unclear
+        {
+            "hash": "abc",
+            "message": "feat: add feature",
+            "author": "Dev",
+            "date": "2024-01-01",
+        },
+        {
+            "hash": "def",
+            "message": "fix!: breaking fix",
+            "author": "Dev",
+            "date": "2024-01-02",
+        },
+        {
+            "hash": "ghi",
+            "message": "update things",
+            "author": "Dev",
+            "date": "2024-01-03",
+        },  # Unclear
     ]
 
     # Configure only "feat", but heuristics should still catch breaking changes and unclear commits
     important = identify_important_commits(commits, always_diff_types=["feat"])
-    
+
     assert len(important) == 3
     hashes = [c["hash"] for c in important]
     assert "abc" in hashes  # feat (configured)
@@ -590,8 +696,18 @@ def test_identify_important_commits_heuristics_still_apply():
 def test_collect_commits_and_diffs_with_always_diff_types(tmp_path, monkeypatch):
     """Test that collect_commits_and_diffs passes always_diff_types correctly."""
     sample_commits = [
-        {"hash": "abc123", "message": "feat: add feature", "author": "Dev", "date": "2024-01-01"},
-        {"hash": "def456", "message": "fix: resolve bug", "author": "Dev", "date": "2024-01-02"},
+        {
+            "hash": "abc123",
+            "message": "feat: add feature",
+            "author": "Dev",
+            "date": "2024-01-01",
+        },
+        {
+            "hash": "def456",
+            "message": "fix: resolve bug",
+            "author": "Dev",
+            "date": "2024-01-02",
+        },
     ]
 
     def mock_get_commit_log(*args, **kwargs):
@@ -600,8 +716,12 @@ def test_collect_commits_and_diffs_with_always_diff_types(tmp_path, monkeypatch)
     def mock_get_commit_diff(*args, **kwargs):
         return "sample diff content"
 
-    monkeypatch.setattr("releaser.ai.data_collector.get_commit_log", mock_get_commit_log)
-    monkeypatch.setattr("releaser.ai.data_collector.get_commit_diff", mock_get_commit_diff)
+    monkeypatch.setattr(
+        "releaser.ai.data_collector.get_commit_log", mock_get_commit_log
+    )
+    monkeypatch.setattr(
+        "releaser.ai.data_collector.get_commit_diff", mock_get_commit_diff
+    )
 
     # Call with always_diff_types
     data = collect_commits_and_diffs(

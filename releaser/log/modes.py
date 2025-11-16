@@ -16,7 +16,7 @@ import subprocess
 import sys
 import time
 from datetime import datetime
-from typing import Dict, Optional
+from typing import Dict, Optional, Callable
 
 from ..console import console, logger
 from .streaming import LogStreamingClient, LogStreamer
@@ -245,7 +245,7 @@ def _setup_tunnel_service(
     args: argparse.Namespace, client_or_streamer
 ) -> Optional[PublicTunnelService]:
     """Set up public tunnel service with log callback."""
-    log_callback = None
+    log_callback_fn: Optional[Callable[[str, str], None]] = None
 
     # Set up log callback if HTTP server is enabled
     if args.http_server:
@@ -293,9 +293,12 @@ def _setup_tunnel_service(
             pass
 
     # Create and start tunnel service
+    # Use the created callback if defined
+    log_callback_fn = locals().get("log_callback", None)
+
     tunnel_service = PublicTunnelService(
         port=args.port,
-        log_callback=log_callback,
+        log_callback=log_callback_fn,
         tunnel_enabled=True,
         tunnel_host=args.tunnel_host,
         bore_executable=args.bore_executable,

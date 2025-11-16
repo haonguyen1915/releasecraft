@@ -74,7 +74,9 @@ def compute_cache_key(
         "previous_version": previous_version,
         "model": model,
         "temperature": temperature,
-        "diffs": sorted(diffs.keys()) if diffs else [],  # Diff commit hashes (sorted for determinism)
+        "diffs": sorted(diffs.keys())
+        if diffs
+        else [],  # Diff commit hashes (sorted for determinism)
     }
 
     # Serialize to JSON with sorted keys for determinism
@@ -108,7 +110,9 @@ def get_cached_notes(cache_key: str) -> Optional[str]:
 
     try:
         notes = cache_file.read_text(encoding="utf-8")
-        logger.info(f"✓ Cache hit! Using cached release notes (key: {cache_key[:16]}...)")
+        logger.info(
+            f"✓ Cache hit! Using cached release notes (key: {cache_key[:16]}...)"
+        )
         return notes
     except Exception as e:
         logger.warning(f"Failed to read cache file: {e}")
@@ -166,6 +170,7 @@ def clear_cache(max_age_days: Optional[int] = None) -> int:
     else:
         # Delete old files
         import time
+
         cutoff_time = time.time() - (max_age_days * 24 * 60 * 60)
 
         for cache_file in cache_dir.glob("*.md"):

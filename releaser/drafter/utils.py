@@ -1,18 +1,20 @@
 from __future__ import annotations
 
+import os
+import re
+import subprocess
+from typing import Iterable, Optional
+
 """Lightweight git utilities used by bump flow and rules.
 
 This module intentionally avoids external dependencies and provides
 best-effort implementations that are resilient to non-git directories.
 """
 
-import os
-import re
-import subprocess
-from typing import Iterable, Optional
 
-
-def _run_git(args: list[str], cwd: str | None = None, check: bool = False) -> subprocess.CompletedProcess:
+def _run_git(
+    args: list[str], cwd: str | None = None, check: bool = False
+) -> subprocess.CompletedProcess:
     try:
         return subprocess.run(
             ["git", *args],
@@ -72,7 +74,7 @@ def _semver_key(tag: str, prefix: str = "v"):
     # Extract numeric x.y.z from optional prefix
     version = tag
     if prefix and version.startswith(prefix):
-        version = version[len(prefix):]
+        version = version[len(prefix) :]
     m = re.match(r"^(\d+)\.(\d+)\.(\d+)(?:-.+)?(?:\+.+)?$", version)
     if not m:
         return (-1, -1, -1, 1)  # non-matching tags sort last
@@ -82,7 +84,9 @@ def _semver_key(tag: str, prefix: str = "v"):
     return (major, minor, patch, is_stable)
 
 
-def get_latest_remote_tag(cwd: str = ".", remote: str = "origin", prefix: Optional[str] = None) -> str:
+def get_latest_remote_tag(
+    cwd: str = ".", remote: str = "origin", prefix: Optional[str] = None
+) -> str:
     """Return latest tag name found on remote, best-effort.
 
     Uses `git ls-remote --tags` and selects highest semantic version (optionally by prefix).
@@ -121,7 +125,7 @@ def get_commits_since_tag(tag: str, cwd: str = ".") -> list[str]:
     cp = _run_git(["log", "--pretty=format:%s".replace("%s", fmt), range_ref], cwd)
     if cp.returncode != 0:
         return []
-    return [l for l in cp.stdout.splitlines() if l.strip()]
+    return [line for line in cp.stdout.splitlines() if line.strip()]
 
 
 def parse_commit_type(subject: str) -> str:
@@ -167,4 +171,3 @@ def get_contributors(since_tag: str | None, cwd: str = ".") -> str:
         if name:
             names.append(f"@{name}")
     return ", ".join(names)
-

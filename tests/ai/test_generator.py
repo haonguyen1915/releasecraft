@@ -1,8 +1,6 @@
 """Tests for AI generator module."""
 
-from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
-import subprocess
+from unittest.mock import patch
 
 import pytest
 
@@ -61,7 +59,9 @@ def mock_release_notes():
     )
 
 
-def test_generate_release_notes_success(mock_ai_config, mock_commits, mock_release_notes, tmp_path, monkeypatch):
+def test_generate_release_notes_success(
+    mock_ai_config, mock_commits, mock_release_notes, tmp_path, monkeypatch
+):
     """Test successful release notes generation."""
     # Mock data collection
     mock_data = {
@@ -69,12 +69,13 @@ def test_generate_release_notes_success(mock_ai_config, mock_commits, mock_relea
         "diffs": {},
     }
 
-    with patch("releaser.ai.generator.collect_commits_and_diffs", return_value=mock_data), \
-         patch("releaser.ai.generator.generate_release_notes", return_value=mock_release_notes), \
-         patch("releaser.ai.generator.os.getenv", return_value="fake-api-key"), \
-         patch("releaser.ai.generator.get_cached_notes", return_value=None), \
-         patch("releaser.ai.generator.save_cached_notes"):
-
+    with patch(
+        "releaser.ai.generator.collect_commits_and_diffs", return_value=mock_data
+    ), patch(
+        "releaser.ai.generator.generate_release_notes", return_value=mock_release_notes
+    ), patch("releaser.ai.generator.os.getenv", return_value="fake-api-key"), patch(
+        "releaser.ai.generator.get_cached_notes", return_value=None
+    ), patch("releaser.ai.generator.save_cached_notes"):
         notes = generate_release_notes_for_version(
             config=mock_ai_config,
             repo_path=tmp_path,
@@ -96,10 +97,11 @@ def test_generate_release_notes_with_cache_hit(mock_ai_config, mock_commits, tmp
         "diffs": {},
     }
 
-    with patch("releaser.ai.generator.collect_commits_and_diffs", return_value=mock_data), \
-         patch("releaser.ai.generator.get_cached_notes", return_value=cached_notes), \
-         patch("releaser.ai.generator.generate_release_notes") as mock_generate:
-
+    with patch(
+        "releaser.ai.generator.collect_commits_and_diffs", return_value=mock_data
+    ), patch(
+        "releaser.ai.generator.get_cached_notes", return_value=cached_notes
+    ), patch("releaser.ai.generator.generate_release_notes") as mock_generate:
         notes = generate_release_notes_for_version(
             config=mock_ai_config,
             repo_path=tmp_path,
@@ -114,7 +116,9 @@ def test_generate_release_notes_with_cache_hit(mock_ai_config, mock_commits, tmp
         mock_generate.assert_not_called()
 
 
-def test_generate_release_notes_cache_disabled(mock_ai_config, mock_commits, mock_release_notes, tmp_path):
+def test_generate_release_notes_cache_disabled(
+    mock_ai_config, mock_commits, mock_release_notes, tmp_path
+):
     """Test generation with cache disabled."""
     # Disable cache
     mock_ai_config.cache = False
@@ -124,12 +128,15 @@ def test_generate_release_notes_cache_disabled(mock_ai_config, mock_commits, moc
         "diffs": {},
     }
 
-    with patch("releaser.ai.generator.collect_commits_and_diffs", return_value=mock_data), \
-         patch("releaser.ai.generator.generate_release_notes", return_value=mock_release_notes), \
-         patch("releaser.ai.generator.os.getenv", return_value="fake-api-key"), \
-         patch("releaser.ai.generator.get_cached_notes") as mock_get_cache, \
-         patch("releaser.ai.generator.save_cached_notes") as mock_save_cache:
-
+    with patch(
+        "releaser.ai.generator.collect_commits_and_diffs", return_value=mock_data
+    ), patch(
+        "releaser.ai.generator.generate_release_notes", return_value=mock_release_notes
+    ), patch("releaser.ai.generator.os.getenv", return_value="fake-api-key"), patch(
+        "releaser.ai.generator.get_cached_notes"
+    ) as mock_get_cache, patch(
+        "releaser.ai.generator.save_cached_notes"
+    ) as mock_save_cache:
         notes = generate_release_notes_for_version(
             config=mock_ai_config,
             repo_path=tmp_path,
@@ -151,7 +158,9 @@ def test_generate_release_notes_no_commits(mock_ai_config, tmp_path):
         "diffs": {},
     }
 
-    with patch("releaser.ai.generator.collect_commits_and_diffs", return_value=mock_data):
+    with patch(
+        "releaser.ai.generator.collect_commits_and_diffs", return_value=mock_data
+    ):
         notes = generate_release_notes_for_version(
             config=mock_ai_config,
             repo_path=tmp_path,
@@ -169,10 +178,11 @@ def test_generate_release_notes_missing_api_key(mock_ai_config, mock_commits, tm
         "diffs": {},
     }
 
-    with patch("releaser.ai.generator.collect_commits_and_diffs", return_value=mock_data), \
-         patch("releaser.ai.generator.os.getenv", return_value=None), \
-         patch("releaser.ai.generator.get_cached_notes", return_value=None):
-
+    with patch(
+        "releaser.ai.generator.collect_commits_and_diffs", return_value=mock_data
+    ), patch("releaser.ai.generator.os.getenv", return_value=None), patch(
+        "releaser.ai.generator.get_cached_notes", return_value=None
+    ):
         with pytest.raises(ValueError, match="API key not found"):
             generate_release_notes_for_version(
                 config=mock_ai_config,
@@ -184,8 +194,10 @@ def test_generate_release_notes_missing_api_key(mock_ai_config, mock_commits, tm
 
 def test_generate_release_notes_git_error(mock_ai_config, tmp_path):
     """Test error handling when git operations fail."""
-    with patch("releaser.ai.generator.collect_commits_and_diffs", side_effect=Exception("Git error")):
-
+    with patch(
+        "releaser.ai.generator.collect_commits_and_diffs",
+        side_effect=Exception("Git error"),
+    ):
         with pytest.raises(ValueError, match="Failed to collect git data"):
             generate_release_notes_for_version(
                 config=mock_ai_config,
@@ -195,24 +207,27 @@ def test_generate_release_notes_git_error(mock_ai_config, tmp_path):
             )
 
 
-def test_generate_release_notes_with_diffs(mock_ai_config, mock_commits, mock_release_notes, tmp_path):
+def test_generate_release_notes_with_diffs(
+    mock_ai_config, mock_commits, mock_release_notes, tmp_path
+):
     """Test generation with diffs included."""
     mock_ai_config.include_diff = True
 
     mock_data = {
         "commits": mock_commits,
-        "diffs": {
-            "abc123": "diff --git a/file.py b/file.py\n+new code"
-        },
+        "diffs": {"abc123": "diff --git a/file.py b/file.py\n+new code"},
     }
 
-    with patch("releaser.ai.generator.collect_commits_and_diffs", return_value=mock_data), \
-         patch("releaser.ai.generator.generate_release_notes", return_value=mock_release_notes) as mock_gen, \
-         patch("releaser.ai.generator.os.getenv", return_value="fake-api-key"), \
-         patch("releaser.ai.generator.get_cached_notes", return_value=None), \
-         patch("releaser.ai.generator.save_cached_notes"):
-
-        notes = generate_release_notes_for_version(
+    with patch(
+        "releaser.ai.generator.collect_commits_and_diffs", return_value=mock_data
+    ), patch(
+        "releaser.ai.generator.generate_release_notes", return_value=mock_release_notes
+    ) as mock_gen, patch(
+        "releaser.ai.generator.os.getenv", return_value="fake-api-key"
+    ), patch("releaser.ai.generator.get_cached_notes", return_value=None), patch(
+        "releaser.ai.generator.save_cached_notes"
+    ):
+        _notes = generate_release_notes_for_version(
             config=mock_ai_config,
             repo_path=tmp_path,
             current_version="1.2.0",
@@ -225,19 +240,22 @@ def test_generate_release_notes_with_diffs(mock_ai_config, mock_commits, mock_re
         assert "abc123" in call_kwargs["diffs"]
 
 
-def test_generate_release_notes_with_fallback_success(mock_ai_config, mock_commits, mock_release_notes, tmp_path):
+def test_generate_release_notes_with_fallback_success(
+    mock_ai_config, mock_commits, mock_release_notes, tmp_path
+):
     """Test fallback function with successful generation."""
     mock_data = {
         "commits": mock_commits,
         "diffs": {},
     }
 
-    with patch("releaser.ai.generator.collect_commits_and_diffs", return_value=mock_data), \
-         patch("releaser.ai.generator.generate_release_notes", return_value=mock_release_notes), \
-         patch("releaser.ai.generator.os.getenv", return_value="fake-api-key"), \
-         patch("releaser.ai.generator.get_cached_notes", return_value=None), \
-         patch("releaser.ai.generator.save_cached_notes"):
-
+    with patch(
+        "releaser.ai.generator.collect_commits_and_diffs", return_value=mock_data
+    ), patch(
+        "releaser.ai.generator.generate_release_notes", return_value=mock_release_notes
+    ), patch("releaser.ai.generator.os.getenv", return_value="fake-api-key"), patch(
+        "releaser.ai.generator.get_cached_notes", return_value=None
+    ), patch("releaser.ai.generator.save_cached_notes"):
         notes = generate_release_notes_with_fallback(
             config=mock_ai_config,
             repo_path=tmp_path,
@@ -249,12 +267,16 @@ def test_generate_release_notes_with_fallback_success(mock_ai_config, mock_commi
         assert isinstance(notes, str)
 
 
-def test_generate_release_notes_with_fallback_error_graceful(mock_ai_config, mock_commits, tmp_path):
+def test_generate_release_notes_with_fallback_error_graceful(
+    mock_ai_config, mock_commits, tmp_path
+):
     """Test fallback function returns None on error (fail_on_error=False)."""
     mock_ai_config.fail_on_error = False
 
-    with patch("releaser.ai.generator.collect_commits_and_diffs", side_effect=Exception("Some error")):
-
+    with patch(
+        "releaser.ai.generator.collect_commits_and_diffs",
+        side_effect=Exception("Some error"),
+    ):
         notes = generate_release_notes_with_fallback(
             config=mock_ai_config,
             repo_path=tmp_path,
@@ -266,12 +288,16 @@ def test_generate_release_notes_with_fallback_error_graceful(mock_ai_config, moc
         assert notes is None
 
 
-def test_generate_release_notes_with_fallback_error_strict(mock_ai_config, mock_commits, tmp_path):
+def test_generate_release_notes_with_fallback_error_strict(
+    mock_ai_config, mock_commits, tmp_path
+):
     """Test fallback function raises on error when fail_on_error=True."""
     mock_ai_config.fail_on_error = True
 
-    with patch("releaser.ai.generator.collect_commits_and_diffs", side_effect=Exception("Some error")):
-
+    with patch(
+        "releaser.ai.generator.collect_commits_and_diffs",
+        side_effect=Exception("Some error"),
+    ):
         with pytest.raises(Exception, match="Some error"):
             generate_release_notes_with_fallback(
                 config=mock_ai_config,
@@ -281,20 +307,23 @@ def test_generate_release_notes_with_fallback_error_strict(mock_ai_config, mock_
             )
 
 
-def test_generate_release_notes_saves_to_cache(mock_ai_config, mock_commits, mock_release_notes, tmp_path):
+def test_generate_release_notes_saves_to_cache(
+    mock_ai_config, mock_commits, mock_release_notes, tmp_path
+):
     """Test that generated notes are saved to cache."""
     mock_data = {
         "commits": mock_commits,
         "diffs": {},
     }
 
-    with patch("releaser.ai.generator.collect_commits_and_diffs", return_value=mock_data), \
-         patch("releaser.ai.generator.generate_release_notes", return_value=mock_release_notes), \
-         patch("releaser.ai.generator.os.getenv", return_value="fake-api-key"), \
-         patch("releaser.ai.generator.get_cached_notes", return_value=None), \
-         patch("releaser.ai.generator.save_cached_notes") as mock_save:
-
-        notes = generate_release_notes_for_version(
+    with patch(
+        "releaser.ai.generator.collect_commits_and_diffs", return_value=mock_data
+    ), patch(
+        "releaser.ai.generator.generate_release_notes", return_value=mock_release_notes
+    ), patch("releaser.ai.generator.os.getenv", return_value="fake-api-key"), patch(
+        "releaser.ai.generator.get_cached_notes", return_value=None
+    ), patch("releaser.ai.generator.save_cached_notes") as mock_save:
+        _notes = generate_release_notes_for_version(
             config=mock_ai_config,
             repo_path=tmp_path,
             current_version="1.2.0",

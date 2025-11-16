@@ -20,7 +20,7 @@ def _run_git(args: List[str]) -> str:
 
 def _get_staged_files() -> List[str]:
     out = _run_git(["diff", "--staged", "--name-only"])
-    files = [l.strip() for l in out.splitlines() if l.strip()]
+    files = [line.strip() for line in out.splitlines() if line.strip()]
     return files
 
 
@@ -40,7 +40,7 @@ def _get_recent_commit_subjects(n: int) -> List[str]:
         return []
     try:
         out = _run_git(["log", f"-n{n}", "--pretty=%s"])
-        subjects = [l.strip() for l in out.splitlines() if l.strip()]
+        subjects = [line.strip() for line in out.splitlines() if line.strip()]
         # Filter out merge commits for signal clarity
         subjects = [s for s in subjects if not s.lower().startswith("merge ")]
         return subjects
@@ -60,7 +60,9 @@ def run(args: argparse.Namespace) -> int:
     files = [f for f in files if not (f in seen or seen.add(f))]
 
     if not files:
-        logger.error("No files provided and no staged changes. Use --staged or --files.")
+        logger.error(
+            "No files provided and no staged changes. Use --staged or --files."
+        )
         return 1
 
     # Build diffs mapping per file
@@ -69,21 +71,31 @@ def run(args: argparse.Namespace) -> int:
     # Load AI/config defaults
     cfg = load_config(getattr(args, "config", None))
     ai_cfg = getattr(cfg, "ai", None)
-    api_key = None if getattr(args, "no_ai", False) else os.environ.get(getattr(ai_cfg, "api_key_env", "OPENAI_API_KEY"))
+    api_key = (
+        None
+        if getattr(args, "no_ai", False)
+        else os.environ.get(getattr(ai_cfg, "api_key_env", "OPENAI_API_KEY"))
+    )
     model = getattr(args, "model", None) or getattr(ai_cfg, "model", "gpt-4o-mini")
     try:
-        temperature = float(getattr(args, "temperature", None) or getattr(ai_cfg, "temperature", 0.2))
+        temperature = float(
+            getattr(args, "temperature", None) or getattr(ai_cfg, "temperature", 0.2)
+        )
     except Exception:
         temperature = 0.2
     try:
-        max_tokens = int(getattr(args, "max_tokens", None) or getattr(ai_cfg, "max_tokens", 600))
+        max_tokens = int(
+            getattr(args, "max_tokens", None) or getattr(ai_cfg, "max_tokens", 600)
+        )
     except Exception:
         max_tokens = 600
 
     # Determine history count (CLI overrides config when provided)
     history_opt = getattr(args, "history", None)
     if history_opt is None:
-        history_n = int(getattr(getattr(cfg, "commit_gen", None), "history_commits", 10))
+        history_n = int(
+            getattr(getattr(cfg, "commit_gen", None), "history_commits", 10)
+        )
     else:
         history_n = int(history_opt)
 
@@ -100,7 +112,9 @@ def run(args: argparse.Namespace) -> int:
         system_prompt_file=getattr(args, "system_prompt_file", None),
         user_prompt_file=getattr(args, "user_prompt_file", None),
         recent_subjects=recent_subjects,
-        demote_feat_if_similar=bool(getattr(getattr(cfg, "commit_gen", None), "demote_feat_if_similar", True)),
+        demote_feat_if_similar=bool(
+            getattr(getattr(cfg, "commit_gen", None), "demote_feat_if_similar", True)
+        ),
     )
 
     text = cm.to_text()
@@ -118,16 +132,16 @@ def run(args: argparse.Namespace) -> int:
     else:
         # Display the generated commit message
         bordered.create_bordered_content(
-            text,
-            title="Generated Commit Message",
-            dry_run=False
+            text, title="Generated Commit Message", dry_run=False
         )
 
         # Check if --yes flag is set
         auto_commit = getattr(args, "yes", False)
 
         # Ask user if they want to commit (or auto-commit if --yes)
-        should_commit = auto_commit or prompt_confirmation("Do you want to create a commit with this message?", default=True)
+        should_commit = auto_commit or prompt_confirmation(
+            "Do you want to create a commit with this message?", default=True
+        )
 
         if should_commit:
             try:
@@ -136,7 +150,7 @@ def run(args: argparse.Namespace) -> int:
                     ["git", "commit", "-m", text],
                     check=True,
                     capture_output=True,
-                    text=True
+                    text=True,
                 )
                 logger.success("Commit created successfully!")
             except subprocess.CalledProcessError as e:

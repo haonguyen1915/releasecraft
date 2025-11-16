@@ -74,7 +74,7 @@ class PublicTunnelService:
     def _create_request_handler(self):
         """Create HTTP request handler class."""
         log_callback = self.log_callback
-        stdout = self.stdout
+        _stdout = self.stdout
 
         class LogRequestHandler(http.server.BaseHTTPRequestHandler):
             def _send_json_response(self, status_code: int, data: Dict) -> None:
@@ -143,9 +143,7 @@ class PublicTunnelService:
                     console.print(
                         f"✓ [green]HTTP log service running on http://127.0.0.1:{self.port}[/green]"
                     )
-                    console.print(
-                        "[green]   Endpoints: GET /health, POST /log[/green]"
-                    )
+                    console.print("[green]   Endpoints: GET /health, POST /log[/green]")
                     self._http_server.serve_forever(poll_interval=0.5)
 
                 self._http_thread = threading.Thread(target=serve_http, daemon=True)

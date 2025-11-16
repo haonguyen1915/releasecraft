@@ -1,5 +1,3 @@
-from pathlib import Path
-
 from releaser.config.load import load_config
 
 
@@ -33,4 +31,3 @@ fail_on_error = true
     assert cfg.ai.cache is False
     assert cfg.ai.accept_automatically is True
     assert cfg.ai.fail_on_error is True
-

@@ -1,5 +1,4 @@
 from types import SimpleNamespace
-from pathlib import Path
 
 from releaser.bump.flow import run as run_bump
 
@@ -45,5 +44,4 @@ default_channel = "rc"
     assert rc == 0
     # pyproject should now be 0.1.0-rc.1 applied to current base, not bumped
     txt = (tmp_path / "pyproject.toml").read_text()
-    assert "version = \"0.1.0-rc.1\"" in txt
-
+    assert 'version = "0.1.0-rc.1"' in txt

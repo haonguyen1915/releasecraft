@@ -1,5 +1,4 @@
 from types import SimpleNamespace
-from pathlib import Path
 
 from releaser.bump.flow import run as run_bump
 
@@ -7,11 +6,14 @@ from releaser.bump.flow import run as run_bump
 def test_flow_manual_dry_run_no_changes(tmp_path, monkeypatch):
     # Create a minimal pyproject.toml so Poetry provider detects
     py = tmp_path / "pyproject.toml"
-    py.write_text("""
+    py.write_text(
+        """
 [project]
 name = "demo"
 version = "0.1.0"
-""".strip() + "\n")
+""".strip()
+        + "\n"
+    )
 
     # Run from that directory
     monkeypatch.chdir(tmp_path)
@@ -41,4 +43,3 @@ version = "0.1.0"
 
     # Ensure file unchanged on dry-run
     assert py.read_text() == original
-

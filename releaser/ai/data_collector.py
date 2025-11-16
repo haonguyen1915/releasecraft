@@ -87,7 +87,9 @@ def collect_commits_and_diffs(
     # Smart diff selection
     diffs = {}
     if include_diffs and commits:
-        important_commits = identify_important_commits(commits, always_diff_types=always_diff_types)
+        important_commits = identify_important_commits(
+            commits, always_diff_types=always_diff_types
+        )
 
         for commit in important_commits:
             try:
@@ -139,7 +141,8 @@ def get_commit_log(
         result = subprocess.run(
             [
                 "git",
-                "-C", str(repo_path),
+                "-C",
+                str(repo_path),
                 "log",
                 f"{from_ref}..{to_ref}",
                 f"--max-count={max_commits}",
@@ -163,12 +166,14 @@ def get_commit_log(
             continue
 
         commit_hash, author, date, message = parts
-        commits.append({
-            "hash": commit_hash,
-            "author": author,
-            "date": date.split()[0],  # Extract date only (YYYY-MM-DD)
-            "message": message,
-        })
+        commits.append(
+            {
+                "hash": commit_hash,
+                "author": author,
+                "date": date.split()[0],  # Extract date only (YYYY-MM-DD)
+                "message": message,
+            }
+        )
 
     return commits
 
@@ -196,7 +201,8 @@ def get_commit_diff(
         result = subprocess.run(
             [
                 "git",
-                "-C", str(repo_path),
+                "-C",
+                str(repo_path),
                 "show",
                 commit_hash,
                 "--format=",  # Don't show commit message
@@ -213,7 +219,10 @@ def get_commit_diff(
 
     # Truncate if too large
     if len(diff) > max_size:
-        diff = diff[:max_size] + f"\n\n... (diff truncated, original size: {len(diff)} chars)"
+        diff = (
+            diff[:max_size]
+            + f"\n\n... (diff truncated, original size: {len(diff)} chars)"
+        )
 
     return diff
 
@@ -256,12 +265,28 @@ def identify_important_commits(
 
     # Conventional commit prefixes
     conventional_prefixes = [
-        "feat", "fix", "docs", "style", "refactor",
-        "perf", "test", "build", "ci", "chore", "revert"
+        "feat",
+        "fix",
+        "docs",
+        "style",
+        "refactor",
+        "perf",
+        "test",
+        "build",
+        "ci",
+        "chore",
+        "revert",
     ]
 
     # Keywords that indicate importance
-    security_keywords = ["security", "vulnerability", "cve", "exploit", "xss", "injection"]
+    security_keywords = [
+        "security",
+        "vulnerability",
+        "cve",
+        "exploit",
+        "xss",
+        "injection",
+    ]
 
     # Normalize always_diff_types
     if always_diff_types is None:
@@ -332,11 +357,20 @@ def identify_important_commits(
             parts = msg.split(":", 1)
             if len(parts) == 2:
                 actual_msg = parts[1].strip()
-                vague_words = ["update", "change", "modify", "fix", "improve", "refactor"]
+                vague_words = [
+                    "update",
+                    "change",
+                    "modify",
+                    "fix",
+                    "improve",
+                    "refactor",
+                ]
 
                 # If message is just 1-2 generic words, include diff for clarity
                 words = actual_msg.split()
-                if len(words) <= 2 and any(vague in actual_msg.lower() for vague in vague_words):
+                if len(words) <= 2 and any(
+                    vague in actual_msg.lower() for vague in vague_words
+                ):
                     important.append(commit)
                     continue
 
@@ -382,7 +416,9 @@ def parse_conventional_commit(message: str) -> dict[str, str | None]:
             'description': 'add OAuth support'
         }
     """
-    pattern = r"^(?P<type>\w+)(\((?P<scope>.+)\))?(?P<breaking>!)?:\s*(?P<description>.+)"
+    pattern = (
+        r"^(?P<type>\w+)(\((?P<scope>.+)\))?(?P<breaking>!)?:\s*(?P<description>.+)"
+    )
     match = re.match(pattern, message)
 
     if not match:
@@ -462,8 +498,7 @@ def truncate_diffs_to_budget(
 
         if len(diff_text) > max_chars:
             truncated[commit_hash] = (
-                diff_text[:max_chars] +
-                "\n\n... (diff truncated to fit token budget)"
+                diff_text[:max_chars] + "\n\n... (diff truncated to fit token budget)"
             )
         else:
             truncated[commit_hash] = diff_text

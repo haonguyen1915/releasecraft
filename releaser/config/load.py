@@ -34,7 +34,9 @@ def _merge_into_config(cfg: AppConfig, data: Dict[str, Any]) -> None:
         if "version_targets" in rel:
             cfg.release.version_targets = list(rel.get("version_targets") or [])
         if "change_log_file" in rel:
-            cfg.release.change_log_file = str(rel.get("change_log_file") or cfg.release.change_log_file)
+            cfg.release.change_log_file = str(
+                rel.get("change_log_file") or cfg.release.change_log_file
+            )
         if "allow_dirty" in rel:
             cfg.release.allow_dirty = bool(rel.get("allow_dirty"))
 
@@ -42,9 +44,13 @@ def _merge_into_config(cfg: AppConfig, data: Dict[str, Any]) -> None:
         rver = rel.get("version", {}) or {}
         if rver:
             if "strategy" in rver:
-                cfg.release.version.strategy = str(rver.get("strategy") or cfg.release.version.strategy)
+                cfg.release.version.strategy = str(
+                    rver.get("strategy") or cfg.release.version.strategy
+                )
             if "since" in rver:
-                cfg.release.version.since = str(rver.get("since") or cfg.release.version.since)
+                cfg.release.version.since = str(
+                    rver.get("since") or cfg.release.version.since
+                )
             if "to" in rver:
                 cfg.release.version.to = str(rver.get("to") or cfg.release.version.to)
             if "source" in rver:
@@ -61,9 +67,14 @@ def _merge_into_config(cfg: AppConfig, data: Dict[str, Any]) -> None:
             if "enabled" in rpre:
                 cfg.release.pre_release.enabled = bool(rpre.get("enabled"))
             if "default_channel" in rpre:
-                cfg.release.pre_release.default_channel = str(rpre.get("default_channel") or cfg.release.pre_release.default_channel)
+                cfg.release.pre_release.default_channel = str(
+                    rpre.get("default_channel")
+                    or cfg.release.pre_release.default_channel
+                )
             if "auto_increment" in rpre:
-                cfg.release.pre_release.auto_increment = bool(rpre.get("auto_increment"))
+                cfg.release.pre_release.auto_increment = bool(
+                    rpre.get("auto_increment")
+                )
             if "reset_on_bump" in rpre:
                 cfg.release.pre_release.reset_on_bump = bool(rpre.get("reset_on_bump"))
             if "apply" in rpre:
@@ -77,9 +88,13 @@ def _merge_into_config(cfg: AppConfig, data: Dict[str, Any]) -> None:
             if "enabled" in rcl:
                 cfg.release.change_log.enabled = bool(rcl.get("enabled"))
             if "file" in rcl:
-                cfg.release.change_log.file = str(rcl.get("file") or cfg.release.change_log.file)
+                cfg.release.change_log.file = str(
+                    rcl.get("file") or cfg.release.change_log.file
+                )
             if "mode" in rcl:
-                cfg.release.change_log.mode = str(rcl.get("mode") or cfg.release.change_log.mode)
+                cfg.release.change_log.mode = str(
+                    rcl.get("mode") or cfg.release.change_log.mode
+                )
 
         # [release.auto_gen_notes] subsection
         rn = rel.get("auto_gen_notes", {}) or {}
@@ -89,14 +104,18 @@ def _merge_into_config(cfg: AppConfig, data: Dict[str, Any]) -> None:
             if "include_diff" in rn:
                 cfg.release.auto_gen_notes.include_diff = bool(rn.get("include_diff"))
             if "always_diff_types" in rn:
-                cfg.release.auto_gen_notes.always_diff_types = list(rn.get("always_diff_types") or [])
+                cfg.release.auto_gen_notes.always_diff_types = list(
+                    rn.get("always_diff_types") or []
+                )
             if "max_commits" in rn:
                 try:
                     cfg.release.auto_gen_notes.max_commits = int(rn.get("max_commits"))
                 except Exception:
                     pass
             if "mode" in rn:
-                cfg.release.auto_gen_notes.mode = str(rn.get("mode") or cfg.release.auto_gen_notes.mode)
+                cfg.release.auto_gen_notes.mode = str(
+                    rn.get("mode") or cfg.release.auto_gen_notes.mode
+                )
 
     # [llm] or [llm-config] section
     llm = data.get("llm", {}) or data.get("llm-config", {}) or {}
@@ -159,7 +178,9 @@ def _merge_into_config(cfg: AppConfig, data: Dict[str, Any]) -> None:
         if "allow_bang" in cl:
             cfg.commit_lint.allow_bang = bool(cl.get("allow_bang"))
         if "allow_breaking_footer" in cl:
-            cfg.commit_lint.allow_breaking_footer = bool(cl.get("allow_breaking_footer"))
+            cfg.commit_lint.allow_breaking_footer = bool(
+                cl.get("allow_breaking_footer")
+            )
         if "require_ticket" in cl:
             cfg.commit_lint.require_ticket = bool(cl.get("require_ticket"))
         if "ticket_pattern" in cl:
@@ -178,7 +199,9 @@ def _merge_into_config(cfg: AppConfig, data: Dict[str, Any]) -> None:
             except Exception:
                 pass
         if "demote_feat_if_similar" in cg:
-            cfg.commit_gen.demote_feat_if_similar = bool(cg.get("demote_feat_if_similar"))
+            cfg.commit_gen.demote_feat_if_similar = bool(
+                cg.get("demote_feat_if_similar")
+            )
         if "allow_scope" in cg:
             cfg.commit_gen.allow_scope = bool(cg.get("allow_scope"))
 
@@ -210,8 +233,6 @@ def load_config(config_path: Optional[str] = None) -> AppConfig:
       - home: ~/.releaser/config.toml
     """
     cfg = AppConfig()
-
-    tried: list[str] = []
 
     def _try(p: Path) -> bool:
         try:

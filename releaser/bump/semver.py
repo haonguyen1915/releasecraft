@@ -85,4 +85,3 @@ def apply_prerelease(
                 next_n = n + 1 if auto_increment else n
 
     return f"{base_version}-{channel}.{next_n}"
-

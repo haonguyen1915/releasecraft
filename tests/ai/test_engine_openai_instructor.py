@@ -1,6 +1,4 @@
 from pathlib import Path
-from types import SimpleNamespace
-import tempfile
 
 import pytest
 
@@ -39,6 +37,7 @@ class FakeOpenAI:
 
 class FakeJinja2:
     """Fake Jinja2 module for testing."""
+
     class Template:
         def __init__(self, template_str):
             self.template_str = template_str
@@ -50,11 +49,15 @@ class FakeJinja2:
                 if isinstance(value, list):
                     # For commits list
                     if value and isinstance(value[0], dict):
-                        commits_text = "\n".join([
-                            f"- {c.get('hash', '')[:8]}: {c.get('message', '')}"
-                            for c in value
-                        ])
-                        result = result.replace(f"{{{{ {key}|length }}}}", str(len(value)))
+                        commits_text = "\n".join(
+                            [
+                                f"- {c.get('hash', '')[:8]}: {c.get('message', '')}"
+                                for c in value
+                            ]
+                        )
+                        result = result.replace(
+                            f"{{{{ {key}|length }}}}", str(len(value))
+                        )
                         result = result.replace(f"{{{{ {key} }}}}", commits_text)
                 elif isinstance(value, dict):
                     # For diffs dict
@@ -68,7 +71,9 @@ class FakeJinja2:
 def test_generate_structured(monkeypatch):
     """Test the generic generate_structured function."""
     # Monkeypatch importer to return fake modules
-    monkeypatch.setattr(eng, "_import_clients", lambda: (FakeInstructorModule, FakeOpenAI))
+    monkeypatch.setattr(
+        eng, "_import_clients", lambda: (FakeInstructorModule, FakeOpenAI)
+    )
 
     rn = eng.generate_structured(
         api_key="test-key",
@@ -95,7 +100,7 @@ def test_load_template_from_default(tmp_path, monkeypatch):
     template_file.write_text(template_content)
 
     # Monkeypatch the __file__ path to point to our tmp directory
-    original_file = Path(eng.__file__)
+    _original_file = Path(eng.__file__)
     fake_file = tmp_path / "engine" / "openai_instructor.py"
     fake_file.parent.mkdir(parents=True, exist_ok=True)
 
@@ -113,8 +118,7 @@ def test_load_template_from_custom_path(tmp_path):
     custom_template.write_text(custom_content)
 
     result = eng._load_template(
-        custom_path=str(custom_template),
-        default_filename="ignored.md"
+        custom_path=str(custom_template), default_filename="ignored.md"
     )
     assert result == custom_content
 
@@ -123,8 +127,7 @@ def test_load_template_custom_not_found():
     """Test that loading non-existent custom template raises error."""
     with pytest.raises(FileNotFoundError, match="Custom template not found"):
         eng._load_template(
-            custom_path="/nonexistent/path/template.md",
-            default_filename="ignored.md"
+            custom_path="/nonexistent/path/template.md", default_filename="ignored.md"
         )
 
 
@@ -142,7 +145,9 @@ def test_render_template(monkeypatch):
 def test_generate_release_notes_success(monkeypatch, tmp_path):
     """Test successful generation of release notes with all components."""
     # Setup fake modules
-    monkeypatch.setattr(eng, "_import_clients", lambda: (FakeInstructorModule, FakeOpenAI))
+    monkeypatch.setattr(
+        eng, "_import_clients", lambda: (FakeInstructorModule, FakeOpenAI)
+    )
     monkeypatch.setattr(eng, "_import_jinja2", lambda: FakeJinja2)
 
     # Create temporary template files
@@ -173,19 +178,17 @@ def test_generate_release_notes_success(monkeypatch, tmp_path):
             "hash": "abc123def456",
             "message": "feat: add new feature",
             "author": "Jane Doe <jane@example.com>",
-            "date": "2024-01-15"
+            "date": "2024-01-15",
         },
         {
             "hash": "def456abc123",
             "message": "fix: resolve bug",
             "author": "John Smith <john@example.com>",
-            "date": "2024-01-14"
-        }
+            "date": "2024-01-14",
+        },
     ]
 
-    diffs = {
-        "abc123def456": "diff --git a/file.py b/file.py\n+new line"
-    }
+    diffs = {"abc123def456": "diff --git a/file.py b/file.py\n+new line"}
 
     # Call the function
     notes = eng.generate_release_notes(
@@ -239,7 +242,9 @@ def test_generate_release_notes_missing_api_key(monkeypatch, tmp_path):
 
 def test_generate_release_notes_with_custom_templates(monkeypatch, tmp_path):
     """Test using custom template files."""
-    monkeypatch.setattr(eng, "_import_clients", lambda: (FakeInstructorModule, FakeOpenAI))
+    monkeypatch.setattr(
+        eng, "_import_clients", lambda: (FakeInstructorModule, FakeOpenAI)
+    )
     monkeypatch.setattr(eng, "_import_jinja2", lambda: FakeJinja2)
 
     # Create custom templates
@@ -249,7 +254,9 @@ def test_generate_release_notes_with_custom_templates(monkeypatch, tmp_path):
     custom_user = tmp_path / "my_user.md.j2"
     custom_user.write_text("Custom user prompt: {{ commits|length }} commits")
 
-    commits = [{"hash": "abc123", "message": "test", "author": "Test", "date": "2024-01-01"}]
+    commits = [
+        {"hash": "abc123", "message": "test", "author": "Test", "date": "2024-01-01"}
+    ]
 
     notes = eng.generate_release_notes(
         api_key="test-key",
@@ -268,7 +275,9 @@ def test_generate_release_notes_with_custom_templates(monkeypatch, tmp_path):
 
 def test_generate_release_notes_without_diffs(monkeypatch, tmp_path):
     """Test generation without providing diffs (diffs=None)."""
-    monkeypatch.setattr(eng, "_import_clients", lambda: (FakeInstructorModule, FakeOpenAI))
+    monkeypatch.setattr(
+        eng, "_import_clients", lambda: (FakeInstructorModule, FakeOpenAI)
+    )
     monkeypatch.setattr(eng, "_import_jinja2", lambda: FakeJinja2)
 
     prompts_dir = tmp_path / "prompts"
@@ -284,7 +293,9 @@ def test_generate_release_notes_without_diffs(monkeypatch, tmp_path):
     fake_file.parent.mkdir(parents=True, exist_ok=True)
     monkeypatch.setattr(eng, "__file__", str(fake_file))
 
-    commits = [{"hash": "abc", "message": "test", "author": "Test", "date": "2024-01-01"}]
+    commits = [
+        {"hash": "abc", "message": "test", "author": "Test", "date": "2024-01-01"}
+    ]
 
     notes = eng.generate_release_notes(
         api_key="test-key",
@@ -298,4 +309,3 @@ def test_generate_release_notes_without_diffs(monkeypatch, tmp_path):
     )
 
     assert isinstance(notes, ReleaseNotes)
-

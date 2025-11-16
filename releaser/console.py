@@ -22,7 +22,7 @@ error_console = Console(stderr=True)
 
 class RichLogger:
     """Logger-like interface using rich console for consistent styling."""
-    
+
     def __init__(self, console_instance: Optional[Console] = None):
         self.console = console_instance or console
 
@@ -56,12 +56,8 @@ class RichLogger:
             header_text = f"[bold]{title}[/bold]\n[dim]{subtitle}[/dim]"
         else:
             header_text = f"[bold]{title}[/bold]"
-        
-        panel = Panel(
-            header_text,
-            style="blue",
-            padding=(1, 2)
-        )
+
+        panel = Panel(header_text, style="blue", padding=(1, 2))
         self.console.print(panel)
 
     def print_rule(self, title: Optional[str] = None, style: str = "blue"):
@@ -73,29 +69,26 @@ class RichLogger:
         styles = {
             "info": "blue",
             "success": "green",
-            "warning": "yellow", 
-            "error": "red bold"
+            "warning": "yellow",
+            "error": "red bold",
         }
-        icons = {
-            "info": "ℹ️",
-            "success": "✅",
-            "warning": "⚠️",
-            "error": "❌"
-        }
-        
+        icons = {"info": "ℹ️", "success": "✅", "warning": "⚠️", "error": "❌"}
+
         style = styles.get(status, "blue")
         icon = icons.get(status, "ℹ️")
-        
+
         self.console.print(f"{icon} {message}", style=style)
 
 
 class BorderedOutput:
     """Create bordered output similar to the existing table-like displays."""
-    
+
     def __init__(self, console_instance: Optional[Console] = None):
         self.console = console_instance or console
 
-    def create_bordered_content(self, content: str, title: str = "", dry_run: bool = False):
+    def create_bordered_content(
+        self, content: str, title: str = "", dry_run: bool = False
+    ):
         """Create a bordered panel with content."""
         if dry_run:
             header_text = "DRY RUN - " + title if title else "DRY RUN - PREVIEW"
@@ -110,29 +103,39 @@ class BorderedOutput:
             title_align="left",
             style=panel_style,
             padding=(1, 2),
-            expand=False
+            expand=False,
         )
         self.console.print(panel)
 
-    def create_table(self, title: str = "", headers: Optional[list] = None, 
-                    rows: Optional[list] = None, style: str = "blue") -> Table:
+    def create_table(
+        self,
+        title: str = "",
+        headers: Optional[list] = None,
+        rows: Optional[list] = None,
+        style: str = "blue",
+    ) -> Table:
         """Create a rich table with styling."""
         table = Table(title=title, style=style, show_header=bool(headers))
-        
+
         if headers:
             for header in headers:
                 table.add_column(header, style="cyan")
-        
+
         if rows:
             for row in rows:
                 # Convert all items to strings
                 str_row = [str(item) for item in row]
                 table.add_row(*str_row)
-        
+
         return table
 
-    def print_table(self, title: str = "", headers: Optional[list] = None,
-                   rows: Optional[list] = None, style: str = "blue"):
+    def print_table(
+        self,
+        title: str = "",
+        headers: Optional[list] = None,
+        rows: Optional[list] = None,
+        style: str = "blue",
+    ):
         """Print a formatted table."""
         table = self.create_table(title, headers, rows, style)
         self.console.print(table)
@@ -143,29 +146,27 @@ def create_duplicate_commits_table(duplicates: dict) -> Table:
     table = Table(
         title="⚠️ Duplicate Commit Messages Found",
         show_header=True,
-        header_style="bold cyan"
+        header_style="bold cyan",
     )
-    
+
     table.add_column("Message", style="white", width=60)
     table.add_column("SHA", style="bright_red", width=10)
     table.add_column("Count", style="bright_red", width=8, justify="center")
-    
+
     for message, commits in duplicates.items():
         # Truncate message if too long
-        display_message = (
-            message[:57] + "..." if len(message) > 60 else message
-        )
+        display_message = message[:57] + "..." if len(message) > 60 else message
         count = len(commits)
-        
+
         # First row with message and count
         first_sha = commits[0][0][:8] if commits else ""
         table.add_row(display_message, first_sha, str(count))
-        
+
         # Additional rows for other SHAs
         for sha, _ in commits[1:]:
             short_sha = sha[:8]
             table.add_row("", short_sha, "")
-    
+
     return table
 
 
@@ -200,7 +201,7 @@ def prompt_choice(message: str, choices: list, default: Optional[str] = None) ->
     console.print()
 
     # Create mapping from number strings to original choices
-    number_to_choice = {str(i+1): choice for i, choice in enumerate(choices)}
+    number_to_choice = {str(i + 1): choice for i, choice in enumerate(choices)}
 
     # Also allow full text match
     valid_inputs = list(number_to_choice.keys()) + choices
@@ -219,7 +220,7 @@ def prompt_choice(message: str, choices: list, default: Optional[str] = None) ->
         prompt_text,
         choices=valid_inputs,
         default=default_display,
-        show_choices=False  # We already showed them above
+        show_choices=False,  # We already showed them above
     )
 
     # Convert number input to choice text
@@ -234,6 +235,7 @@ def print_version_header():
     """Print the version header with rich formatting."""
     try:
         import pyfiglet
+
         ascii_art = pyfiglet.figlet_format("Releaser", font="ansi_shadow")
         console.print(ascii_art, style="bright_blue")
     except ImportError:
@@ -246,7 +248,7 @@ def create_progress_spinner(description: str = "Processing..."):
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
         console=console,
-        transient=True
+        transient=True,
     )
 
 
@@ -254,30 +256,37 @@ def create_progress_spinner(description: str = "Processing..."):
 logger = RichLogger()
 bordered = BorderedOutput()
 
+
 # Compatibility functions for easy migration
 def log_info(message: str, **kwargs):
     """Compatibility function for log_info."""
     logger.info(message, **kwargs)
 
+
 def log_success(message: str, **kwargs):
     """Compatibility function for log_success."""
     logger.success(message, **kwargs)
+
 
 def log_warning(message: str, **kwargs):
     """Compatibility function for log_warning."""
     logger.warning(message, **kwargs)
 
+
 def log_error(message: str, **kwargs):
     """Compatibility function for log_error."""
     logger.error(message, **kwargs)
+
 
 def highlight_value(value: str) -> Text:
     """Compatibility function for highlight_value."""
     return logger.highlight_value(value)
 
+
 def print_rule(title: Optional[str] = None, style: str = "blue"):
     """Compatibility function for print_rule."""
     logger.print_rule(title, style)
+
 
 def print_status(message: str, status: str = "info"):
     """Compatibility function for print_status."""

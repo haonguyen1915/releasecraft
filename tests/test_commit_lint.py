@@ -39,4 +39,4 @@ def test_subject_length_limit(tmp_path: Path, monkeypatch):
 
 def test_skip_merge_and_revert():
     assert validate_commit_message("Merge branch 'x'") == []
-    assert validate_commit_message("Revert \"some commit\"") == []
+    assert validate_commit_message('Revert "some commit"') == []

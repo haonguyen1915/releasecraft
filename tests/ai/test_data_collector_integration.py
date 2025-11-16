@@ -101,7 +101,9 @@ def test_collect_with_diffs_from_real_repo(repo_root):
         print("\nCommits with diffs (important):")
         for commit_hash in data["diffs"].keys():
             # Find the commit message
-            commit = next((c for c in data["commits"] if c["hash"] == commit_hash), None)
+            commit = next(
+                (c for c in data["commits"] if c["hash"] == commit_hash), None
+            )
             if commit:
                 print(f"  {commit_hash[:8]} - {commit['message']}")
                 print(f"    Diff size: {len(data['diffs'][commit_hash])} chars")
@@ -166,13 +168,15 @@ def test_collect_with_token_budget(repo_root):
         max_diff_size=500,  # Very small to test truncation
     )
 
-    print(f"\nCollecting with max_diff_size=500")
+    print("\nCollecting with max_diff_size=500")
     print(f"Found {len(data['commits'])} commits")
     print(f"Including diffs for {len(data['diffs'])} important commits")
 
     # Verify all diffs are within size limit
     for commit_hash, diff in data["diffs"].items():
-        assert len(diff) <= 700, f"Diff for {commit_hash} exceeds size limit (with truncation message)"
+        assert (
+            len(diff) <= 700
+        ), f"Diff for {commit_hash} exceeds size limit (with truncation message)"
         print(f"  {commit_hash[:8]}: {len(diff)} chars")
 
 
@@ -195,9 +199,22 @@ def test_conventional_commits_in_real_repo(repo_root):
         pytest.skip("No commits found")
 
     conventional_commits = [
-        c for c in data["commits"]
-        if any(c["message"].startswith(f"{prefix}:") or c["message"].startswith(f"{prefix}(")
-               for prefix in ["feat", "fix", "docs", "chore", "refactor", "test", "build", "ci"])
+        c
+        for c in data["commits"]
+        if any(
+            c["message"].startswith(f"{prefix}:")
+            or c["message"].startswith(f"{prefix}(")
+            for prefix in [
+                "feat",
+                "fix",
+                "docs",
+                "chore",
+                "refactor",
+                "test",
+                "build",
+                "ci",
+            ]
+        )
     ]
 
     print(f"\nConventional commits: {len(conventional_commits)}/{len(data['commits'])}")

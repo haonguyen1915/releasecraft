@@ -63,10 +63,14 @@ def generate_release_notes_for_version(
         ... )
         >>> print(notes)
     """
-    logger.info(f"Generating AI release notes from {previous_version} to {current_version}")
+    logger.info(
+        f"Generating AI release notes from {previous_version} to {current_version}"
+    )
 
     # Step 1: Collect commit data
-    logger.debug(f"Collecting commits (max: {config.max_commits}, include_diffs: {config.include_diff})")
+    logger.debug(
+        f"Collecting commits (max: {config.max_commits}, include_diffs: {config.include_diff})"
+    )
 
     try:
         data = collect_commits_and_diffs(
@@ -112,7 +116,9 @@ def generate_release_notes_for_version(
         )
 
     # Step 4: Generate structured release notes
-    logger.debug(f"Calling AI model: {config.model} (temp={config.temperature}, max_tokens={config.max_tokens})")
+    logger.debug(
+        f"Calling AI model: {config.model} (temp={config.temperature}, max_tokens={config.max_tokens})"
+    )
 
     try:
         release_notes: ReleaseNotes = generate_release_notes(

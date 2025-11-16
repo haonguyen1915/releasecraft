@@ -46,4 +46,3 @@ def test_poetry_provider_detect_tool_poetry(tmp_path: Path):
     prov = PoetryProvider(str(tmp_path))
     assert prov.detect() is True
     assert prov.read_version() == "0.3.0"
-

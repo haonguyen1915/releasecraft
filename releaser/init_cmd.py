@@ -67,10 +67,10 @@ def run(args) -> int:
     pre_channel = getattr(args, "pre_channel", None) or "rc"
     pre_apply = _parse_csv_list(getattr(args, "pre_apply", ""))
     pre_block = _parse_csv_list(getattr(args, "pre_block", ""))
-    pre_channel_map = _parse_channel_map(getattr(args, "pre_channel_map", ""))
+    _pre_channel_map = _parse_channel_map(getattr(args, "pre_channel_map", ""))
 
-    bump_apply = _parse_csv_list(getattr(args, "bump_apply", ""))
-    bump_block = _parse_csv_list(getattr(args, "bump_block", ""))
+    _bump_apply = _parse_csv_list(getattr(args, "bump_apply", ""))
+    _bump_block = _parse_csv_list(getattr(args, "bump_block", ""))
 
     yes = bool(getattr(args, "yes", False))
     global_flag = bool(getattr(args, "global_cfg", False))
@@ -206,6 +206,7 @@ def _render_full_config(doc: Dict[str, object]) -> str:
     We serialize all supported options with inline comments so users
     can learn and tweak without reading external docs.
     """
+
     def b(v: bool) -> str:
         return "true" if v else "false"
 
@@ -220,7 +221,9 @@ def _render_full_config(doc: Dict[str, object]) -> str:
     version_cfg = release.get("version", {}) if isinstance(release, dict) else {}  # type: ignore
     pre_release = release.get("pre_release", {}) if isinstance(release, dict) else {}  # type: ignore
     change_log = release.get("change_log", {}) if isinstance(release, dict) else {}  # type: ignore
-    auto_gen_notes = release.get("auto_gen_notes", {}) if isinstance(release, dict) else {}  # type: ignore
+    auto_gen_notes = (
+        release.get("auto_gen_notes", {}) if isinstance(release, dict) else {}
+    )  # type: ignore
     llm = doc.get("llm-config", {}) or {}
     hooks = doc.get("hooks", {}) or {}
     providers = doc.get("provider", {}) or {}
@@ -233,55 +236,123 @@ def _render_full_config(doc: Dict[str, object]) -> str:
     lines.append(f"type = \"{project.get('type', 'auto')}\"\n")
     lines.append("# Tag prefix for git tags (e.g., v1.2.3)\n")
     lines.append(f"tag_prefix = \"{project.get('tag_prefix', 'v')}\"\n")
-    lines.append("# Prefer running native tooling (poetry version / npm version) when available\n")
+    lines.append(
+        "# Prefer running native tooling (poetry version / npm version) when available\n"
+    )
     lines.append(f"use_native = {b(bool(project.get('use_native', True)))}\n")
 
     lines.append("\n\n# --- Release Configuration ---\n")
     lines.append("[release]\n")
-    lines.append(f"create_commit = {b(bool(release.get('create_commit', True)) if isinstance(release, dict) else True)}\n")
-    lines.append(f"create_tag = {b(bool(release.get('create_tag', True)) if isinstance(release, dict) else True)}\n")
-    lines.append(f"push = {b(bool(release.get('push', False)) if isinstance(release, dict) else False)}\n")
-    version_targets = list(release.get('version_targets', []) or []) if isinstance(release, dict) else []
+    lines.append(
+        f"create_commit = {b(bool(release.get('create_commit', True)) if isinstance(release, dict) else True)}\n"
+    )
+    lines.append(
+        f"create_tag = {b(bool(release.get('create_tag', True)) if isinstance(release, dict) else True)}\n"
+    )
+    lines.append(
+        f"push = {b(bool(release.get('push', False)) if isinstance(release, dict) else False)}\n"
+    )
+    version_targets = (
+        list(release.get("version_targets", []) or [])
+        if isinstance(release, dict)
+        else []
+    )
     lines.append(f"version_targets = {list_str(version_targets)}\n")
-    lines.append(f"change_log_file = \"{release.get('change_log_file', 'CHANGELOG.md') if isinstance(release, dict) else 'CHANGELOG.md'}\"\n")
-    lines.append(f"allow_dirty = {b(bool(release.get('allow_dirty', False)) if isinstance(release, dict) else False)}\n")
+    lines.append(
+        f"change_log_file = \"{release.get('change_log_file', 'CHANGELOG.md') if isinstance(release, dict) else 'CHANGELOG.md'}\"\n"
+    )
+    lines.append(
+        f"allow_dirty = {b(bool(release.get('allow_dirty', False)) if isinstance(release, dict) else False)}\n"
+    )
 
     lines.append("\n[release.version]\n")
-    lines.append(f"strategy = \"{version_cfg.get('strategy', 'auto') if isinstance(version_cfg, dict) else 'auto'}\"\n")
-    lines.append(f"since = \"{version_cfg.get('since', '') if isinstance(version_cfg, dict) else ''}\"\n")
-    lines.append(f"to = \"{version_cfg.get('to', 'HEAD') if isinstance(version_cfg, dict) else 'HEAD'}\"\n")
+    lines.append(
+        f"strategy = \"{version_cfg.get('strategy', 'auto') if isinstance(version_cfg, dict) else 'auto'}\"\n"
+    )
+    lines.append(
+        f"since = \"{version_cfg.get('since', '') if isinstance(version_cfg, dict) else ''}\"\n"
+    )
+    lines.append(
+        f"to = \"{version_cfg.get('to', 'HEAD') if isinstance(version_cfg, dict) else 'HEAD'}\"\n"
+    )
     # How to resolve the current version used as the bump base
     # Options: file|local_tag|remote_tag|auto
-    lines.append(f"source = \"{version_cfg.get('source', 'file') if isinstance(version_cfg, dict) else 'file'}\"\n")
+    lines.append(
+        f"source = \"{version_cfg.get('source', 'file') if isinstance(version_cfg, dict) else 'file'}\"\n"
+    )
 
     lines.append("\n[release.pre_release]\n")
-    lines.append(f"enabled = {b(bool(pre_release.get('enabled', False)) if isinstance(pre_release, dict) else False)}\n")
-    lines.append(f"default_channel = \"{pre_release.get('default_channel', 'rc') if isinstance(pre_release, dict) else 'rc'}\"\n")
-    lines.append(f"auto_increment = {b(bool(pre_release.get('auto_increment', True)) if isinstance(pre_release, dict) else True)}\n")
-    lines.append(f"reset_on_bump = {b(bool(pre_release.get('reset_on_bump', True)) if isinstance(pre_release, dict) else True)}\n")
-    pre_apply = list(pre_release.get('apply', ["develop", "release/*"]) or ["develop", "release/*"]) if isinstance(pre_release, dict) else ["develop", "release/*"]
-    pre_block = list(pre_release.get('block', ["main", "master", "hotfix/*"]) or ["main", "master", "hotfix/*"]) if isinstance(pre_release, dict) else ["main", "master", "hotfix/*"]
+    lines.append(
+        f"enabled = {b(bool(pre_release.get('enabled', False)) if isinstance(pre_release, dict) else False)}\n"
+    )
+    lines.append(
+        f"default_channel = \"{pre_release.get('default_channel', 'rc') if isinstance(pre_release, dict) else 'rc'}\"\n"
+    )
+    lines.append(
+        f"auto_increment = {b(bool(pre_release.get('auto_increment', True)) if isinstance(pre_release, dict) else True)}\n"
+    )
+    lines.append(
+        f"reset_on_bump = {b(bool(pre_release.get('reset_on_bump', True)) if isinstance(pre_release, dict) else True)}\n"
+    )
+    pre_apply = (
+        list(
+            pre_release.get("apply", ["develop", "release/*"])
+            or ["develop", "release/*"]
+        )
+        if isinstance(pre_release, dict)
+        else ["develop", "release/*"]
+    )
+    pre_block = (
+        list(
+            pre_release.get("block", ["main", "master", "hotfix/*"])
+            or ["main", "master", "hotfix/*"]
+        )
+        if isinstance(pre_release, dict)
+        else ["main", "master", "hotfix/*"]
+    )
     lines.append(f"apply = {list_str(pre_apply)}\n")
     lines.append(f"block = {list_str(pre_block)}\n")
 
     lines.append("\n[release.change_log]\n")
-    lines.append("# Auto mode derives sections from commits; 'notes' includes only user notes\n")
-    lines.append(f"enabled = {b(bool(change_log.get('enabled', True)) if isinstance(change_log, dict) else True)}\n")
-    lines.append(f"file = \"{change_log.get('file', 'CHANGELOG.md') if isinstance(change_log, dict) else 'CHANGELOG.md'}\"\n")
-    lines.append(f"mode = \"{change_log.get('mode', 'auto') if isinstance(change_log, dict) else 'auto'}\"\n")
+    lines.append(
+        "# Auto mode derives sections from commits; 'notes' includes only user notes\n"
+    )
+    lines.append(
+        f"enabled = {b(bool(change_log.get('enabled', True)) if isinstance(change_log, dict) else True)}\n"
+    )
+    lines.append(
+        f"file = \"{change_log.get('file', 'CHANGELOG.md') if isinstance(change_log, dict) else 'CHANGELOG.md'}\"\n"
+    )
+    lines.append(
+        f"mode = \"{change_log.get('mode', 'auto') if isinstance(change_log, dict) else 'auto'}\"\n"
+    )
 
     lines.append("\n[release.auto_gen_notes]\n")
     lines.append("# AI-powered release notes generation\n")
-    lines.append(f"enabled = {b(bool(auto_gen_notes.get('enabled', False)) if isinstance(auto_gen_notes, dict) else False)}\n")
-    lines.append(f"include_diff = {b(bool(auto_gen_notes.get('include_diff', True)) if isinstance(auto_gen_notes, dict) else True)}\n")
-    always_diff = list(auto_gen_notes.get('always_diff_types', ["feat"]) or ["feat"]) if isinstance(auto_gen_notes, dict) else ["feat"]
+    lines.append(
+        f"enabled = {b(bool(auto_gen_notes.get('enabled', False)) if isinstance(auto_gen_notes, dict) else False)}\n"
+    )
+    lines.append(
+        f"include_diff = {b(bool(auto_gen_notes.get('include_diff', True)) if isinstance(auto_gen_notes, dict) else True)}\n"
+    )
+    always_diff = (
+        list(auto_gen_notes.get("always_diff_types", ["feat"]) or ["feat"])
+        if isinstance(auto_gen_notes, dict)
+        else ["feat"]
+    )
     lines.append(f"always_diff_types = {list_str(always_diff)}\n")
-    lines.append(f"max_commits = {int(auto_gen_notes.get('max_commits', 200)) if isinstance(auto_gen_notes, dict) else 200}\n")
-    lines.append(f"mode = \"{auto_gen_notes.get('mode', 'auto') if isinstance(auto_gen_notes, dict) else 'auto'}\"\n")
+    lines.append(
+        f"max_commits = {int(auto_gen_notes.get('max_commits', 200)) if isinstance(auto_gen_notes, dict) else 200}\n"
+    )
+    lines.append(
+        f"mode = \"{auto_gen_notes.get('mode', 'auto') if isinstance(auto_gen_notes, dict) else 'auto'}\"\n"
+    )
 
     lines.append("\n\n# --- LLM Configuration ---\n")
     lines.append("[llm-config]\n")
-    lines.append("# Advanced LLM configuration for release notes and commit message generation\n")
+    lines.append(
+        "# Advanced LLM configuration for release notes and commit message generation\n"
+    )
     lines.append(f"enabled = {b(bool(llm.get('enabled', False)))}\n")
     lines.append(f"provider = \"{llm.get('provider', 'openai')}\"\n")
     lines.append(f"model = \"{llm.get('model', 'gpt-4o-mini')}\"\n")
@@ -289,24 +360,28 @@ def _render_full_config(doc: Dict[str, object]) -> str:
     lines.append(f"temperature = {float(llm.get('temperature', 0.2))}\n")
     lines.append(f"max_tokens = {int(llm.get('max_tokens', 2500))}\n")
     lines.append("# Prompt overrides (optional)\n")
-    lines.append("# prompt_release_notes_file = \"path/to/custom_release_notes.md.j2\"\n")
-    lines.append("# system_prompt_file = \"path/to/custom_system_prompt.md\"\n")
+    lines.append('# prompt_release_notes_file = "path/to/custom_release_notes.md.j2"\n')
+    lines.append('# system_prompt_file = "path/to/custom_system_prompt.md"\n')
     lines.append("# Caching and safety\n")
     lines.append(f"cache = {b(bool(llm.get('cache', True)))}\n")
-    lines.append(f"accept_automatically = {b(bool(llm.get('accept_automatically', False)))}\n")
+    lines.append(
+        f"accept_automatically = {b(bool(llm.get('accept_automatically', False)))}\n"
+    )
     lines.append(f"fail_on_error = {b(bool(llm.get('fail_on_error', False)))}\n")
 
     lines.append("\n\n# --- Hooks ---\n")
     lines.append("[hooks]\n")
     lines.append("# Shell commands to run before/after bump (optional)\n")
-    pre_bump = list(hooks.get('pre_bump', []) or []) if isinstance(hooks, dict) else []
-    post_bump = list(hooks.get('post_bump', []) or []) if isinstance(hooks, dict) else []
+    pre_bump = list(hooks.get("pre_bump", []) or []) if isinstance(hooks, dict) else []
+    post_bump = (
+        list(hooks.get("post_bump", []) or []) if isinstance(hooks, dict) else []
+    )
     lines.append(f"pre_bump = {list_str(pre_bump)}\n")
     lines.append(f"post_bump = {list_str(post_bump)}\n")
 
     # Only show provider section for the selected project type
     lines.append("\n\n# --- Provider-Specific Configuration ---\n")
-    project_type = project.get('type', 'auto') if isinstance(project, dict) else 'auto'
+    project_type = project.get("type", "auto") if isinstance(project, dict) else "auto"
 
     if isinstance(providers, dict):
         if project_type == "poetry" and "poetry" in providers:
@@ -317,7 +392,7 @@ def _render_full_config(doc: Dict[str, object]) -> str:
         elif project_type == "setuptools" and "setuptools" in providers:
             lines.append("[provider.setuptools]\n")
             lines.append("# __init__ version file for setuptools projects\n")
-            lines.append("version_file = \"pkg/__init__.py\"\n")
+            lines.append('version_file = "pkg/__init__.py"\n')
             lines.append("\n")
         elif project_type == "npm" and "npm" in providers:
             lines.append("[provider.npm]\n")
@@ -335,7 +410,7 @@ def _render_full_config(doc: Dict[str, object]) -> str:
             if "setuptools" in providers:
                 lines.append("[provider.setuptools]\n")
                 lines.append("# __init__ version file for setuptools projects\n")
-                lines.append("version_file = \"pkg/__init__.py\"\n")
+                lines.append('version_file = "pkg/__init__.py"\n')
                 lines.append("\n")
             if "npm" in providers:
                 lines.append("[provider.npm]\n")
@@ -348,7 +423,9 @@ def _render_full_config(doc: Dict[str, object]) -> str:
     lines.append("[commit_lint]\n")
     lines.append("# Conventional Commit enforcement for commit-msg hook\n")
     lines.append("enabled = true\n")
-    lines.append("types = [\"feat\", \"fix\", \"docs\", \"chore\", \"refactor\", \"perf\", \"test\", \"build\", \"ci\", \"revert\", \"style\"]\n")
+    lines.append(
+        'types = ["feat", "fix", "docs", "chore", "refactor", "perf", "test", "build", "ci", "revert", "style"]\n'
+    )
     lines.append("skip_merge_commits = true\n")
     lines.append("skip_revert_commits = true\n")
 

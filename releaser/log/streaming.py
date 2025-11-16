@@ -19,13 +19,13 @@ import time
 from datetime import datetime
 from typing import Dict, List, Optional
 
-import socketio
+import socketio  # type: ignore[import-untyped]
 
 from ..console import console, logger
 from .capture import KubernetesEventsCapture, KubernetesLogCapture, OutputCapture
 
 try:
-    import psutil
+    import psutil  # type: ignore[import-untyped]
 except ImportError:
     psutil = None
 

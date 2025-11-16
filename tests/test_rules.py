@@ -1,7 +1,8 @@
-from types import SimpleNamespace
-
 from releaser.config.model import AppConfig
-from releaser.bump.rules import check_bump_allowed, check_prerelease_allowed, current_branch
+from releaser.bump.rules import (
+    check_bump_allowed,
+    check_prerelease_allowed,
+)
 
 
 def _cfg() -> AppConfig:
@@ -38,4 +39,3 @@ def test_prerelease_rules_apply_and_channel_map(monkeypatch):
     monkeypatch.setattr("releaser.bump.rules.current_branch", lambda: "feature/x")
     allowed, reason, _ = check_prerelease_allowed(cfg)
     assert allowed is False
-

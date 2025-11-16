@@ -9,7 +9,6 @@ from releaser.ai.cache import (
     save_cached_notes,
     clear_cache,
     get_cache_stats,
-    get_cache_dir,
 )
 
 
@@ -28,8 +27,18 @@ def temp_cache_dir(tmp_path, monkeypatch):
 def test_compute_cache_key_deterministic():
     """Test that cache key is deterministic for same inputs."""
     commits = [
-        {"hash": "abc123", "message": "feat: add feature", "author": "Dev", "date": "2024-01-01"},
-        {"hash": "def456", "message": "fix: bug", "author": "Dev", "date": "2024-01-02"},
+        {
+            "hash": "abc123",
+            "message": "feat: add feature",
+            "author": "Dev",
+            "date": "2024-01-01",
+        },
+        {
+            "hash": "def456",
+            "message": "fix: bug",
+            "author": "Dev",
+            "date": "2024-01-02",
+        },
     ]
 
     key1 = compute_cache_key(
@@ -54,7 +63,14 @@ def test_compute_cache_key_deterministic():
 
 def test_compute_cache_key_different_for_different_inputs():
     """Test that cache key changes when inputs change."""
-    commits = [{"hash": "abc123", "message": "feat: add feature", "author": "Dev", "date": "2024-01-01"}]
+    commits = [
+        {
+            "hash": "abc123",
+            "message": "feat: add feature",
+            "author": "Dev",
+            "date": "2024-01-01",
+        }
+    ]
 
     key1 = compute_cache_key(
         commits=commits,
@@ -98,7 +114,14 @@ def test_compute_cache_key_different_for_different_inputs():
 
 def test_compute_cache_key_with_diffs():
     """Test that diffs affect cache key."""
-    commits = [{"hash": "abc123", "message": "feat: add feature", "author": "Dev", "date": "2024-01-01"}]
+    commits = [
+        {
+            "hash": "abc123",
+            "message": "feat: add feature",
+            "author": "Dev",
+            "date": "2024-01-01",
+        }
+    ]
 
     key_no_diffs = compute_cache_key(
         commits=commits,
@@ -173,6 +196,7 @@ def test_clear_cache_by_age(temp_cache_dir):
     old_time = time.time() - (60 * 24 * 60 * 60)  # 60 days ago
     Path(cache_file).touch()
     import os
+
     os.utime(cache_file, (old_time, old_time))
 
     # Create a new cache file

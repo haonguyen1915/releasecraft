@@ -101,7 +101,7 @@ class GitWorkflowValidator:
                 if len(parts) >= 3:
                     merge_commit = parts[0]
                     message = parts[1]
-                    parents = parts[2].split()
+                    _parents = parts[2].split()
 
                     # Extract branch name from merge message
                     branch_match = re.search(r"Merge branch '([^']+)'", message)
@@ -378,7 +378,7 @@ class GitWorkflowValidator:
                             }
                         )
             return commits
-        except:
+        except Exception:
             return []
 
     def get_all_commits_with_branches(self, limit: int = 30) -> List[Dict]:
@@ -474,7 +474,7 @@ class GitWorkflowValidator:
                             else None,
                         }
                     )
-            except:
+            except Exception:
                 pass
 
         # Analyze commits
@@ -571,7 +571,7 @@ class GitWorkflowValidator:
                             "branches": commit.get("branches", []),
                         }
                     )
-            except:
+            except Exception:
                 pass
 
         return {
@@ -734,7 +734,7 @@ class GitWorkflowValidator:
 
                             diagram.append(f"    checkout {main_branch}")
                             current_branch = main_branch
-                    except:
+                    except Exception:
                         pass
 
         diagram.append("```")

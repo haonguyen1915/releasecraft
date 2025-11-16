@@ -9,6 +9,7 @@ class ReleaseNotes(BaseModel):
     Since conventional commits already categorize changes (feat:, fix:, etc.),
     we focus on high-level highlights rather than detailed sections.
     """
+
     summary: str | None = None
     highlights: list[str] | None = None
     breaking_changes: list[str] | None = None
@@ -29,13 +30,13 @@ class ReleaseNotes(BaseModel):
         # Highlights (main focus)
         if self.highlights:
             parts.append("### Highlights")
-            parts.extend(f"- {h}" for h in self.highlights if h)
+            parts.extend(f"- {h}" for h in (self.highlights or []))
             parts.append("")
 
         # Breaking changes (important for users)
         if self.breaking_changes:
             parts.append("### Breaking Changes")
-            parts.extend(f"- {b}" for b in self.breaking_changes if b)
+            parts.extend(f"- {b}" for b in (self.breaking_changes or []))
             parts.append("")
 
         return "\n".join(parts).strip()

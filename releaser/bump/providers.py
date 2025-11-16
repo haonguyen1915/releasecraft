@@ -25,7 +25,7 @@ class PoetryProvider:
         try:
             data = toml.load(str(self.pyproject))
             # Either PEP 621 [project] or legacy [tool.poetry]
-            return "project" in data or ("tool" in data and "poetry" in data["tool"]) 
+            return "project" in data or ("tool" in data and "poetry" in data["tool"])
         except Exception:
             return False
 
@@ -38,11 +38,7 @@ class PoetryProvider:
             if v:
                 return str(v)
         # Fallback: tool.poetry.version
-        v = (
-            data.get("tool", {})
-            .get("poetry", {})
-            .get("version")
-        )
+        v = data.get("tool", {}).get("poetry", {}).get("version")
         if v:
             return str(v)
         # Default if not found
@@ -53,11 +49,13 @@ class PoetryProvider:
         if "project" in data and isinstance(data["project"], dict):
             data.setdefault("project", {})["version"] = new_version
         elif "tool" in data and "poetry" in data["tool"]:
-            data.setdefault("tool", {}).setdefault("poetry", {})["version"] = new_version
+            data.setdefault("tool", {}).setdefault("poetry", {})[
+                "version"
+            ] = new_version
         else:
             # Create PEP 621 section if absent
             data.setdefault("project", {})["version"] = new_version
-        with open(self.pyproject, "w") as f:
+        with open(self.pyproject, "w", encoding="utf-8") as f:
             toml.dump(data, f)
 
     def _write_version_native(self, new_version: str) -> bool:
@@ -88,4 +86,3 @@ def detect_provider(cwd: str = ".") -> Optional[PoetryProvider]:
     if p.detect():
         return p
     return None
-

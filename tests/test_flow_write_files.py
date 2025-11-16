@@ -1,5 +1,4 @@
 from types import SimpleNamespace
-from pathlib import Path
 
 from releaser.bump.flow import run as run_bump
 
@@ -55,5 +54,5 @@ version_targets = [
     assert rc == 0
 
     # Verify pyproject and __init__ updated
-    assert "version = \"0.2.0\"" in (tmp_path / "pyproject.toml").read_text()
+    assert 'version = "0.2.0"' in (tmp_path / "pyproject.toml").read_text()
     assert (pkg / "__init__.py").read_text().strip().endswith("__version__ = '0.2.0'")

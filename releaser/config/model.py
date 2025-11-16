@@ -7,6 +7,7 @@ from typing import Dict, List, Optional
 @dataclass
 class ProjectConfig:
     """Project configuration (type, tag prefix, native tools)."""
+
     type: str = "auto"  # auto|poetry|setuptools|npm
     tag_prefix: str = "v"
     use_native: bool = True
@@ -15,6 +16,7 @@ class ProjectConfig:
 @dataclass
 class VersionConfig:
     """Version strategy configuration."""
+
     strategy: str = "auto"
     since: str = ""
     to: str = "HEAD"
@@ -27,6 +29,7 @@ class VersionConfig:
 @dataclass
 class PreReleaseConfig:
     """Pre-release configuration."""
+
     enabled: bool = False
     default_channel: str = "rc"
     auto_increment: bool = True
@@ -38,14 +41,18 @@ class PreReleaseConfig:
 @dataclass
 class ChangeLogConfig:
     """Changelog configuration."""
+
     enabled: bool = False
     file: str = "CHANGELOG.md"
-    mode: str = "auto"  # 'auto' to derive from git commits; 'notes' to only include user notes
+    mode: str = (
+        "auto"  # 'auto' to derive from git commits; 'notes' to only include user notes
+    )
 
 
 @dataclass
 class AutoGenNotesConfig:
     """Auto-generated release notes configuration."""
+
     enabled: bool = False
     include_diff: bool = True
     always_diff_types: List[str] = field(default_factory=lambda: ["feat"])
@@ -56,6 +63,7 @@ class AutoGenNotesConfig:
 @dataclass
 class ReleaseConfig:
     """Consolidated release configuration."""
+
     create_commit: bool = True
     create_tag: bool = True
     push: bool = False
@@ -71,6 +79,7 @@ class ReleaseConfig:
 @dataclass
 class LlmConfig:
     """LLM (Language Model) configuration."""
+
     enabled: bool = False
     provider: str = "openai"
     model: str = "gpt-4o-mini"
@@ -88,6 +97,7 @@ class LlmConfig:
 @dataclass
 class HooksConfig:
     """Hooks configuration."""
+
     pre_bump: List[str] = field(default_factory=list)
     post_bump: List[str] = field(default_factory=list)
 
@@ -95,6 +105,7 @@ class HooksConfig:
 @dataclass
 class CommitLintConfig:
     """Commit lint configuration."""
+
     enabled: bool = True
     types: List[str] = field(
         default_factory=lambda: [
@@ -126,6 +137,7 @@ class CommitLintConfig:
 @dataclass
 class CommitGenConfig:
     """Commit generation configuration."""
+
     history_commits: int = 10
     demote_feat_if_similar: bool = True
     allow_scope: bool = False
@@ -134,6 +146,7 @@ class CommitGenConfig:
 @dataclass
 class BumpRulesConfig:
     """Bump rules configuration (branch-based gating)."""
+
     apply: List[str] = field(default_factory=list)
     block: List[str] = field(default_factory=list)
 
@@ -141,6 +154,7 @@ class BumpRulesConfig:
 @dataclass
 class ProviderConfig:
     """Provider-specific configuration."""
+
     # Can be extended for different providers
     poetry: Dict[str, any] = field(default_factory=dict)
     npm: Dict[str, any] = field(default_factory=dict)
@@ -150,6 +164,7 @@ class ProviderConfig:
 @dataclass
 class AppConfig:
     """Main application configuration."""
+
     project: ProjectConfig = field(default_factory=ProjectConfig)
     release: ReleaseConfig = field(default_factory=ReleaseConfig)
     llm: LlmConfig = field(default_factory=LlmConfig)
@@ -166,11 +181,13 @@ class AppConfig:
     @property
     def defaults(self):
         """Deprecated: Use release.create_commit, release.create_tag, release.push instead."""
+
         class _Defaults:
             def __init__(self, release):
                 self.commit = release.create_commit
                 self.tag = release.create_tag
                 self.push = release.push
+
         return _Defaults(self.release)
 
     @property
@@ -196,7 +213,9 @@ class AppConfig:
     @property
     def safety(self):
         """Deprecated: Use release.allow_dirty instead."""
+
         class _Safety:
             def __init__(self, release):
                 self.allow_dirty = release.allow_dirty
+
         return _Safety(self.release)

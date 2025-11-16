@@ -9,14 +9,16 @@ from typing import Optional
 
 def read_notes_from_editor(initial_text: str = "") -> str:
     editor = os.environ.get("EDITOR", "vi")
-    with tempfile.NamedTemporaryFile("w+", delete=False, suffix=".tmp", prefix="releaser_notes_") as tf:
+    with tempfile.NamedTemporaryFile(
+        "w+", delete=False, suffix=".tmp", prefix="releaser_notes_"
+    ) as tf:
         path = tf.name
         if initial_text:
             tf.write(initial_text)
         tf.flush()
     try:
         subprocess.run([editor, path], check=False)
-        with open(path, "r") as f:
+        with open(path, "r", encoding="utf-8") as f:
             return f.read().strip()
     finally:
         try:
@@ -29,7 +31,9 @@ def normalize_notes(notes: Optional[str]) -> str:
     return (notes or "").strip()
 
 
-def append_changelog(changelog_path: str, tag_name: str, date_str: str, notes: str) -> None:
+def append_changelog(
+    changelog_path: str, tag_name: str, date_str: str, notes: str
+) -> None:
     """Deprecated compatibility wrapper.
 
     Historically accepted notes-only and built the header internally.
@@ -50,7 +54,7 @@ def append_changelog_block(changelog_path: str, block: str) -> None:
     p = Path(changelog_path)
     title = "# Changelog\n\n"
     if p.exists():
-        existing = p.read_text()
+        existing = p.read_text(encoding="utf-8")
         p.write_text(block + existing)
     else:
-        p.write_text(title + block)
+        p.write_text(title + block, encoding="utf-8")
