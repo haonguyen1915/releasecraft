@@ -6,7 +6,7 @@ Scope: CLI-first design for easy version bumping and basic configuration, includ
 
 - Make version bumps one-liners (auto or manual).
 - Follow Conventional Commits for automatic bumping.
-- Support writing versions to common places (pyproject, __init__.py, custom files).
+- Support writing versions to common places (pyproject, __init__.py), and sync extra version targets.
 - Provide dry-run, commit+tag, and push options with predictable results.
  - Keep CLI-focused; Python API can come later.
 
@@ -24,7 +24,7 @@ Scope: CLI-first design for easy version bumping and basic configuration, includ
 
 Commands in this phase:
 - `releaser init` Initialize configuration (repo-level and/or host-level).
-- `releaser bump` Bump version (auto/manual), write files, commit, tag, and optionally push.
+- `releaser bump` Bump version (auto/manual), write targets, commit, tag, and optionally push.
 
 Configuration sources and precedence:
 1) CLI flags
@@ -64,7 +64,7 @@ Flags:
 - `--project-type` Force provider type
 - `--tag-prefix` Default tag prefix
 - `--use-native/--no-native` Prefer native ecosystem command
-- `--files` One or more `PATH[:selector]` entries to prefill
+- `--files` One or more `PATH[:selector]` entries to prefill (writes to `version_targets` in config)
 - `--commit/--no-commit` Default commit behavior
 - `--tag/--no-tag` Default tag behavior
 - `--push/--no-push` Default push behavior
@@ -99,7 +99,7 @@ channel_map = { develop = "alpha" }
 apply = ["develop", "release/*"]
 block = ["main", "master"]
 
-files = [
+version_targets = [
   "pyproject.toml:project.version",
   "pkg/__init__.py:__version__",
 ]
@@ -182,7 +182,7 @@ Exit codes:
 - `0` success; `>0` for validation/IO/git errors.
 
 Output:
-- Human: current version, bump reason, new version, files written, commit/tag/push result; in `--dry-run`, shows plan only.
+- Human: current version, bump reason, new version, targets written, commit/tag/push result; in `--dry-run`, shows plan only.
 
 ---
 
@@ -192,7 +192,7 @@ When a `.releaser.toml` (or `~/.releaser/config.toml`) is present, the simplest 
 
 - Stable release (recommended default)
   - Command: `releaser bump`
-  - Behavior: loads config → auto-detect provider → determines bump from commits → writes configured files (and native tool if enabled) → commit → tag → optional push (per `[defaults]`).
+  - Behavior: loads config → auto-detect provider → determines bump from commits → writes configured version targets (and native tool if enabled) → commit → tag → optional push (per `[defaults]`).
 
 - Start or continue pre-release
   - Command: `releaser bump --pre`
@@ -204,7 +204,7 @@ When a `.releaser.toml` (or `~/.releaser/config.toml`) is present, the simplest 
 
 - Quick preview
   - Command: `releaser bump --dry-run`
-  - Behavior: prints the detected provider, chosen bump type, target version, files to update, and git actions—without making changes.
+  - Behavior: prints the detected provider, chosen bump type, target version, version targets to update, and git actions—without making changes.
 
 Notes:
 - CLI flags always override config. For example, `--no-commit`, `--no-tag`, `--push`, `--pre-channel`, or `--tag-prefix` take precedence.
@@ -247,7 +247,7 @@ default_channel = "rc"
 auto_increment = true
 reset_on_bump = true
 
-files = [
+version_targets = [
   "pyproject.toml:project.version",
 ]
 
@@ -291,7 +291,7 @@ To support different ecosystems out of the box, we introduce a provider abstract
 - Poetry: `pyproject.toml` with `[project] version` or `[tool.poetry]`.
 - Setuptools: `setup.cfg` (`[metadata] version`), `setup.py`, or `__init__.__version__` patterns.
 - NPM: `package.json` with `version` field.
-- Fallback: configured `--files` selectors or defaults.
+- Fallback: configured `version_targets` selectors or defaults.
 
 ### Provider Capabilities
 
@@ -304,7 +304,7 @@ To support different ecosystems out of the box, we introduce a provider abstract
 
 - `--project-type auto|poetry|setuptools|npm` Force or auto detect provider (default: `auto`).
 - `--config PATH` Path to config file (default: `.releaser.toml` if present).
-- `--use-native/--no-native` Prefer native ecosystem command when available (default: try native, fall back to files).
+- `--use-native/--no-native` Prefer native ecosystem command when available (default: try native, fall back to version_targets).
 - `--workspace` For NPM monorepos (planned; see Roadmap).
 
 Examples:
@@ -318,7 +318,7 @@ Use the canonical `.releaser.toml` format defined above (sample + minimal exampl
 - `[project]` keys: `type`, `tag_prefix`, `use_native`
 - `[version]` keys: `strategy`, `since`, `to`
 - `[pre_release]` keys: `enabled`, `default_channel`, `auto_increment`, `reset_on_bump`
-- `files` targets for syncing versions across files
+- `version_targets` for syncing versions across files
 
 Resolution order when `--project-type=auto`:
 - Poetry → Setuptools → NPM → Fallback
@@ -331,7 +331,7 @@ Provider behavior in `bump`:
 For the first implementation, the CLI reads only a minimal subset of config keys; other keys may be present but are ignored.
 
 - `[project]`: `type`, `tag_prefix`, `use_native`
-- `files`: list of write targets (optional; provider defaults apply if omitted)
+- `version_targets`: list of write targets (optional; provider defaults apply if omitted)
 - `[defaults]`: `commit`, `tag`, `push`
 - `[bump_rules]`: `apply`, `block` (optional) — controls whether bump is allowed on a branch
 - `[pre_release]`: `enabled`, `default_channel` (optional), `apply`, `block`, `channel_map`
@@ -342,7 +342,7 @@ Defaults when keys are missing:
 - `project.type = "auto"`
 - `project.tag_prefix = "v"`
 - `project.use_native = true`
-- `files = []` (provider chooses sensible defaults)
+- `version_targets = []` (provider chooses sensible defaults)
 - `defaults.commit = true`, `defaults.tag = true`, `defaults.push = false`
 - `pre_release.enabled = false`, `pre_release.default_channel = "rc"`
 - `pre_release.apply = []`, `pre_release.block = []`, `pre_release.channel_map = {}`
@@ -375,7 +375,7 @@ apply = ["develop", "release/*"]
 block = ["main", "master"]
 
 # Optional: explicit file targets; otherwise provider defaults apply
-files = [
+version_targets = [
   "pyproject.toml:project.version",
 ]
 ```
@@ -388,4 +388,4 @@ Branch rules evaluation:
 ### Roadmap (Workspaces/Monorepos)
 
 - NPM workspaces: detect `workspaces` in `package.json`; allow glob patterns in config. Emit a `BumpResult` per package (with a rolled‑up summary).
-- Python multi‑package mono repos: allow multiple `files` entries and tag once at the root.
+- Python multi‑package mono repos: allow multiple `version_targets` entries and tag once at the root.

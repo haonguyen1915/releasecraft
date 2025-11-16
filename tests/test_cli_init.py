@@ -45,7 +45,7 @@ def test_cli_init_non_interactive(tmp_path, monkeypatch):
     assert data["defaults"]["tag"] is True
     assert data["defaults"]["push"] is False
 
-    assert data["files"] == ["pkg/__init__.py:__version__"]
+    assert data["version_targets"] == ["pkg/__init__.py:__version__"]
 
     pr = data["pre_release"]
     assert pr["enabled"] is True
@@ -56,4 +56,3 @@ def test_cli_init_non_interactive(tmp_path, monkeypatch):
     br = data.get("bump_rules", {})
     assert set(br.get("apply", [])) == {"develop", "release/*"}
     assert set(br.get("block", [])) == {"main", "master"}
-

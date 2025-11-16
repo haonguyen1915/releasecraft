@@ -63,7 +63,8 @@ def run(args) -> int:
     tag = not getattr(args, "no_tag", False)
     push = bool(getattr(args, "push", False))
 
-    pre_enabled = bool(getattr(args, "pre_enable", False))
+    # Default to enabling pre-release; can be toggled later if needed
+    pre_enabled = True
     pre_channel = getattr(args, "pre_channel", None) or "rc"
     pre_apply = _parse_csv_list(getattr(args, "pre_apply", ""))
     pre_block = _parse_csv_list(getattr(args, "pre_block", ""))
@@ -77,52 +78,27 @@ def run(args) -> int:
     cfg_path = _default_path(global_flag, getattr(args, "path", None))
 
     if not yes:
-        # Interactive prompts
+        # Minimal interactive prompts only (keep CLI minimal, config full by default)
         project_type = prompt_choice(
             "Project type", ["auto", "poetry", "setuptools", "npm"], default=project_type
         )
         tag_prefix = prompt_input("Tag prefix", default=tag_prefix)
         use_native = prompt_confirmation("Use native tooling when available?", default=True)
 
+        pre_enabled = prompt_confirmation("Enable pre-release?", default=True)
+        if pre_enabled:
+            pre_channel = prompt_choice(
+                "Default pre-release channel", ["alpha", "beta", "rc", "custom"], default=pre_channel
+            )
+            if pre_channel == "custom":
+                pre_channel = prompt_input("Enter custom channel", default="rc").strip() or "rc"
+
         files_str = prompt_input(
             "Version file targets (comma, PATH:selector) [optional]", default=""
         ).strip()
         files_flag = _parse_csv_list(files_str)
 
-        commit = prompt_confirmation("Default commit after bump?", default=True)
-        tag = prompt_confirmation("Default create tag?", default=True)
-        push = prompt_confirmation("Default push after tag?", default=False)
-
-        pre_enabled = prompt_confirmation("Enable pre-release by default?", default=False)
-        pre_channel = prompt_choice(
-            "Default pre-release channel", ["alpha", "beta", "rc", "custom"], default=pre_channel
-        )
-        if pre_channel == "custom":
-            pre_channel = prompt_input("Enter custom channel", default="rc").strip() or "rc"
-
-        pre_apply_str = prompt_input(
-            "Pre-release allowed branches (comma; glob ok) [optional]", default=""
-        )
-        pre_apply = _parse_csv_list(pre_apply_str)
-        pre_block_str = prompt_input(
-            "Pre-release blocked branches (comma; glob ok) [optional]", default=""
-        )
-        pre_block = _parse_csv_list(pre_block_str)
-        pre_map_str = prompt_input(
-            "Pre-release channel map (branch:channel, ...) [optional]", default=""
-        )
-        pre_channel_map = _parse_channel_map(pre_map_str)
-
-        bump_apply_str = prompt_input(
-            "Bump allowed branches (comma; glob ok) [optional]", default=""
-        )
-        bump_apply = _parse_csv_list(bump_apply_str)
-        bump_block_str = prompt_input(
-            "Bump blocked branches (comma; glob ok) [optional]", default=""
-        )
-        bump_block = _parse_csv_list(bump_block_str)
-
-    # Build config document
+    # Build config document (minimal by default)
     doc: Dict[str, object] = {
         "project": {
             "type": project_type,
@@ -139,7 +115,7 @@ def run(args) -> int:
     }
 
     if files_flag:
-        doc["files"] = files_flag
+        doc["version_targets"] = files_flag
 
     if pre_apply:
         doc["pre_release"]["apply"] = pre_apply  # type: ignore[index]
@@ -155,6 +131,32 @@ def run(args) -> int:
         if bump_block:
             br["block"] = bump_block
         doc["bump_rules"] = br
+
+    # Always include full template (all supported sections) so config is self-documenting
+    doc.setdefault("version_targets", doc.get("version_targets", []))
+    doc.setdefault("version", {"strategy": "auto", "since": "", "to": "HEAD"})
+    # Include bump_rules even if empty
+    doc.setdefault("bump_rules", {"apply": [], "block": []})
+    # Ensure pre_release has all keys
+    pr = doc.get("pre_release", {})  # type: ignore[assignment]
+    if isinstance(pr, dict):
+        pr.setdefault("apply", [])
+        pr.setdefault("block", [])
+        pr.setdefault("channel_map", {})
+        doc["pre_release"] = pr
+    # Hooks
+    doc.setdefault("hooks", {"pre_bump": [], "post_bump": []})
+    # Provider sections – include only the selected provider for clarity.
+    provider_all = {
+        "poetry": {"prefer_command": True},
+        "setuptools": {"version_file": "pkg/__init__.py"},
+        "npm": {"prefer_command": True, "workspace": False},
+    }
+    if project_type in ("poetry", "setuptools", "npm"):
+        doc["provider"] = {project_type: provider_all[project_type]}
+    else:
+        # auto: include all provider stubs so users can tweak later
+        doc["provider"] = provider_all
 
     _ensure_parent_dir(cfg_path)
     if cfg_path.exists() and not yes:

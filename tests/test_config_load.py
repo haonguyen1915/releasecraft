@@ -23,7 +23,7 @@ default_channel = "rc"
 apply = ["release/*"]
 block = ["main"]
 
-files = [
+version_targets = [
   "pkg/__init__.py:__version__",
 ]
 """

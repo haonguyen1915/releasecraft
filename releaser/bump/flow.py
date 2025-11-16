@@ -38,7 +38,8 @@ class BumpArgs:
 def _git_commit_tag_push(files_to_add: list[str], tag_name: str, notes: str, do_commit: bool, do_tag: bool, do_push: bool) -> None:
     if do_commit:
         subprocess.run(["git", "add", *files_to_add], check=False)
-        msg = f"chore(release): {tag_name}"
+        # Improved commit subject for clarity
+        msg = f"chore(release): bump version to {tag_name}"
         if notes:
             msg += f"\n\n{notes}"
         subprocess.run(["git", "commit", "-m", msg], check=True)
@@ -112,6 +113,23 @@ def run(args) -> int:
         logger.error(reason or "Bump not allowed")
         return 1
 
+    # Disallow bump if working tree has uncommitted changes
+    # Skip check for dry-run or non-git directories
+    from pathlib import Path as _Path
+    try:
+        repo_present = _Path(".git").exists()
+        if not getattr(args, "dry_run", False) and repo_present:
+            if git_utils.has_uncommitted_changes():
+                logger.warning(
+                    "Uncommitted changes detected. Please commit or stash your changes before releasing."
+                )
+                return 1
+    except Exception:
+        # If the check fails unexpectedly, be safe and abort only when not dry-run
+        if not getattr(args, "dry_run", False):
+            logger.warning("Could not verify clean working tree; aborting release for safety")
+            return 1
+
     # Detect provider (Poetry first)
     provider = providers.detect_provider(cwd=".")
     if not provider:
@@ -132,56 +150,52 @@ def run(args) -> int:
     target_version = None
 
     interactive = False
-    if not bump_type and not manual and not do_finalize:
-        # Interactive selection
-        bt, manual_v = _interactive_pick_bump2(current_version, tag_prefix)
+    if not bump_type and not manual and not do_finalize and not do_pre:
+        # Decide pre-release capability
+        pre_allowed, pre_reason, channel = check_prerelease_allowed(cfg)
+        is_pre_now = parse(current_version).pre is not None
+        # Interactive numeric selection that includes pre-release choices when allowed
+        bt, manual_v, pre_sel, finalize_sel = _interactive_pick_bump3(
+            current_version,
+            tag_prefix,
+            pre_allowed,
+            channel,
+            cfg.pre_release.auto_increment,
+            is_pre_now,
+        )
         interactive = True
+        do_pre = pre_sel or do_pre
+        do_finalize = finalize_sel or do_finalize
         if bt == "manual":
             manual = manual_v
         else:
             bump_type = bt
-
-    # Interactive: choose release line if not specified by flags
-    if interactive and not do_pre and not do_finalize:
-        options = ["Stable release"]
-        # Finalize only if current version is pre-release
-        is_pre_now = parse(current_version).pre is not None
-        pre_allowed, pre_reason, _channel = check_prerelease_allowed(cfg)
-        if pre_allowed:
-            options.append("Pre-release")
-        else:
-            options.append(f"Pre-release (disabled: {pre_reason})")
-        if is_pre_now:
-            options.append("Finalize pre-release to stable")
-
-        choice = prompt_choice("Select release line", options, default=options[0])
-        if choice.startswith("Pre-release ") and not pre_allowed:
-            logger.warning("Pre-release not allowed by branch rules; using stable release")
-        elif choice.startswith("Pre-release"):
-            do_pre = True
-        elif choice.startswith("Finalize"):
-            do_finalize = True
 
     if do_finalize:
         target_version = finalize(current_version)
     elif manual:
         target_version = manual.strip()
     else:
-        base = parse(current_version).base()
-        base_next = bump_base(base, bump_type or _recommend_bump_type())
+        current_base = parse(current_version).base()
+        # Determine base to apply
         if do_pre:
+            # Pre-release: if no explicit bump type, use current base. Otherwise bump base then apply pre.
+            base_for_pre = (
+                bump_base(current_base, bump_type) if bump_type else current_base
+            )
             # Check pre-release rules
             pre_allowed, pre_reason, channel = check_prerelease_allowed(cfg)
             if not pre_allowed:
                 logger.error(pre_reason or "Pre-release not allowed")
                 return 1
             target_version = apply_prerelease(
-                base_next,
+                base_for_pre,
                 previous_version=current_version,
                 channel=channel,
                 auto_increment=cfg.pre_release.auto_increment,
             )
         else:
+            base_next = bump_base(current_base, bump_type or _recommend_bump_type())
             target_version = base_next
 
     tag_name = f"{tag_prefix}{target_version}"
@@ -268,7 +282,16 @@ def run(args) -> int:
 
 
 def _interactive_pick_bump2(current_v: str, tag_prefix: str) -> Tuple[str, Optional[str]]:
-    """Safer variant avoiding nested quotes in f-strings during patching."""
+    """Numeric selection UI for bump type with per-line options.
+
+    Shows options as a numbered list:
+      1) Patch → vX.Y.(Z+1)
+      2) Minor → vX.(Y+1).0
+      3) Major → v(X+1).0.0
+      4) Manual → enter exact version
+      5) Cancel
+    The recommended option (based on commit history) is annotated.
+    """
     recommended = _recommend_bump_type()
     base = parse(current_v).base()
     patch_target = f"{tag_prefix}{bump_base(base, 'patch')}"
@@ -282,21 +305,81 @@ def _interactive_pick_bump2(current_v: str, tag_prefix: str) -> Tuple[str, Optio
         ("manual", "Manual → enter exact version"),
         ("cancel", "Cancel"),
     ]
-    labels = []
-    for key, label in option_specs:
-        if key == recommended:
-            labels.append(f"{label} [recommended]")
-        else:
-            labels.append(label)
-    choice_label = prompt_choice("Select bump type", labels, default=labels[0])
-    idx = labels.index(choice_label)
-    key = option_specs[idx][0]
-    if key == "manual":
-        manual = prompt_input("Enter version (e.g., 1.2.3)")
-        return "manual", manual
-    if key == "cancel":
-        raise SystemExit(0)
-    return key, None
+
+    console.print("\n[bold]Select bump type[/bold]")
+    for i, (key, label) in enumerate(option_specs, start=1):
+        suffix = " [recommended]" if key == recommended else ""
+        console.print(f"  {i}) {label}{suffix}")
+
+    # Prompt until a valid number is chosen
+    while True:
+        choice = prompt_input("Enter choice number", default="1").strip()
+        if choice.isdigit():
+            idx = int(choice)
+            if 1 <= idx <= len(option_specs):
+                key = option_specs[idx - 1][0]
+                if key == "manual":
+                    manual = prompt_input("Enter version (e.g., 1.2.3)")
+                    return "manual", manual
+                if key == "cancel":
+                    raise SystemExit(0)
+                return key, None
+        console.print("[yellow]Please enter a valid number from the list[/yellow]")
+
+
+def _interactive_pick_bump3(
+    current_v: str,
+    tag_prefix: str,
+    pre_allowed: bool,
+    channel: str,
+    auto_increment: bool,
+    is_pre_now: bool,
+) -> Tuple[Optional[str], Optional[str], bool, bool]:
+    """Numeric selection UI combining bump type and release line.
+
+    Returns: (bump_type or 'manual', manual_value, do_pre, do_finalize)
+    """
+    base = parse(current_v).base()
+    patch_target = f"{tag_prefix}{bump_base(base, 'patch')}"
+    minor_target = f"{tag_prefix}{bump_base(base, 'minor')}"
+    major_target = f"{tag_prefix}{bump_base(base, 'major')}"
+
+    # Pre-release preview applies to current base (no bump)
+    from releaser.bump.semver import apply_prerelease as _apply_pr
+    pre_preview = f"{tag_prefix}{_apply_pr(base, previous_version=current_v, channel=channel, auto_increment=auto_increment)}"
+
+    entries: list[Tuple[str, str, bool, bool]] = []
+    # (bump_type/manual, label, do_pre, do_finalize)
+    entries.append(("patch", f"Patch → {patch_target}", False, False))
+    entries.append(("minor", f"Minor → {minor_target}", False, False))
+    entries.append(("major", f"Major → {major_target}", False, False))
+    if pre_allowed:
+        entries.append((None, f"Pre-release ({channel}) → {pre_preview}", True, False))
+    if is_pre_now:
+        from releaser.bump.semver import finalize as _final
+        entries.append((None, f"Finalize current pre-release → {tag_prefix}{_final(current_v)}", False, True))
+    entries.append(("manual", "Manual → enter exact version", False, False))
+    entries.append((None, "Cancel", False, True))
+
+    # Print list
+    console.print("\n[bold]Select bump type[/bold]")
+    for i, (_k, label, _p, _f) in enumerate(entries, start=1):
+        console.print(f"  {i}) {label}")
+
+    # Choose
+    while True:
+        choice = prompt_input("Enter choice number", default="1").strip()
+        if choice.isdigit():
+            idx = int(choice)
+            if 1 <= idx <= len(entries):
+                k, _label, p, fz = entries[idx - 1]
+                if _label.startswith("Cancel"):
+                    raise SystemExit(0)
+                if k == "manual":
+                    manual = prompt_input("Enter version (e.g., 1.2.3)")
+                    return "manual", manual, False, False
+                return k, None, p, fz
+        console.print("[yellow]Please enter a valid number from the list[/yellow]")
 
 
 def _update_additional_file_version(path_str: str, selector: str, version: str, files_to_add: list[str]) -> None:

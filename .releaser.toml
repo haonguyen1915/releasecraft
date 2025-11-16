@@ -1,3 +1,5 @@
+version_targets = []
+
 [project]
 type = "poetry"
 tag_prefix = "v"
@@ -6,10 +8,30 @@ use_native = true
 [defaults]
 commit = true
 tag = true
-push = true
+push = false
 
 [pre_release]
 enabled = true
 default_channel = "rc"
 auto_increment = true
 reset_on_bump = true
+apply = []
+block = []
+
+[version]
+strategy = "auto"
+since = ""
+to = "HEAD"
+
+[bump_rules]
+apply = []
+block = []
+
+[hooks]
+pre_bump = []
+post_bump = []
+
+[pre_release.channel_map]
+
+[provider.poetry]
+prefer_command = true

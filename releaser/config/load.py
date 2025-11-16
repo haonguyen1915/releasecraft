@@ -50,14 +50,17 @@ def _merge_into_config(cfg: AppConfig, data: Dict[str, Any]) -> None:
         if "block" in bump_rules:
             cfg.bump_rules.block = list(bump_rules.get("block") or [])
 
-    files = data.get("files")
+    # Prefer new key 'version_targets', but support legacy 'files' for backward compatibility
+    files = data.get("version_targets")
+    if files is None:
+        files = data.get("files")
     if not files:
         # Some configs may place files under sections; accept project/pre_release placements
         pre = data.get("pre_release", {}) or {}
-        files = pre.get("files")
+        files = pre.get("version_targets") or pre.get("files")
     if not files:
         proj = data.get("project", {}) or {}
-        files = proj.get("files")
+        files = proj.get("version_targets") or proj.get("files")
     if files:
         cfg.files = list(files or [])
 

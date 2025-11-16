@@ -4,8 +4,8 @@ from pathlib import Path
 from releaser.bump.flow import run as run_bump
 
 
-def test_flow_writes_pyproject_and_init(tmp_path, monkeypatch):
-    # Create minimal poetry project
+def test_pre_release_uses_current_base(tmp_path, monkeypatch):
+    # Project with current version 0.1.0
     (tmp_path / "pyproject.toml").write_text(
         """
 [project]
@@ -14,31 +14,21 @@ version = "0.1.0"
 """.strip()
         + "\n"
     )
-    pkg = tmp_path / "pkg"
-    pkg.mkdir()
-    init_py = pkg / "__init__.py"
-    init_py.write_text("__version__ = '0.1.0'\n")
-
-    # Config specifying files and disabling native poetry
+    # Enable pre-release in config
     (tmp_path / ".releaser.toml").write_text(
         """
-[project]
-type = "poetry"
-use_native = false
-
-version_targets = [
-  "pkg/__init__.py:__version__",
-]
+[pre_release]
+enabled = true
+default_channel = "rc"
 """.strip()
         + "\n"
     )
-
     monkeypatch.chdir(tmp_path)
 
     args = SimpleNamespace(
-        manual="0.2.0",
+        manual=None,
         type=None,
-        pre=False,
+        pre=True,
         finalize=False,
         dry_run=False,
         push=False,
@@ -53,7 +43,7 @@ version_targets = [
 
     rc = run_bump(args)
     assert rc == 0
+    # pyproject should now be 0.1.0-rc.1 applied to current base, not bumped
+    txt = (tmp_path / "pyproject.toml").read_text()
+    assert "version = \"0.1.0-rc.1\"" in txt
 
-    # Verify pyproject and __init__ updated
-    assert "version = \"0.2.0\"" in (tmp_path / "pyproject.toml").read_text()
-    assert (pkg / "__init__.py").read_text().strip().endswith("__version__ = '0.2.0'")

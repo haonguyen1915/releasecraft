@@ -36,6 +36,7 @@ def add_init_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--yes", action="store_true", help="Accept defaults; non-interactive")
     parser.add_argument("--global", dest="global_cfg", action="store_true", help="Write to ~/.releaser/config.toml")
     parser.add_argument("--path", type=str, help="Custom config file path")
+    # Keep CLI minimal; full config is now always written by default.
     # Optionally prefill
     parser.add_argument("--project-type", type=str, choices=["auto", "poetry", "setuptools", "npm"], help="Project type")
     parser.add_argument("--tag-prefix", type=str, help="Default tag prefix (v)")
