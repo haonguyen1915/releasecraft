@@ -283,24 +283,45 @@ def _render_full_config(doc: Dict[str, object]) -> str:
     lines.append(f"pre_bump = {list_str(pre_bump)}\n")
     lines.append(f"post_bump = {list_str(post_bump)}\n")
 
+    # Only show provider section for the selected project type
     lines.append("\n\n# --- Provider-Specific Configuration ---\n")
+    project_type = project.get('type', 'auto') if isinstance(project, dict) else 'auto'
+
     if isinstance(providers, dict):
-        if "poetry" in providers:
+        if project_type == "poetry" and "poetry" in providers:
             lines.append("[provider.poetry]\n")
             lines.append("# Prefer `poetry version` when available\n")
             lines.append("prefer_command = true\n")
             lines.append("\n")
-        if "setuptools" in providers:
+        elif project_type == "setuptools" and "setuptools" in providers:
             lines.append("[provider.setuptools]\n")
             lines.append("# __init__ version file for setuptools projects\n")
             lines.append("version_file = \"pkg/__init__.py\"\n")
             lines.append("\n")
-        if "npm" in providers:
+        elif project_type == "npm" and "npm" in providers:
             lines.append("[provider.npm]\n")
             lines.append("# Prefer `npm version`; workspace is for monorepos\n")
             lines.append("prefer_command = true\n")
             lines.append("workspace = false\n")
             lines.append("\n")
+        elif project_type == "auto":
+            # For 'auto', show all providers as stubs for reference
+            if "poetry" in providers:
+                lines.append("[provider.poetry]\n")
+                lines.append("# Prefer `poetry version` when available\n")
+                lines.append("prefer_command = true\n")
+                lines.append("\n")
+            if "setuptools" in providers:
+                lines.append("[provider.setuptools]\n")
+                lines.append("# __init__ version file for setuptools projects\n")
+                lines.append("version_file = \"pkg/__init__.py\"\n")
+                lines.append("\n")
+            if "npm" in providers:
+                lines.append("[provider.npm]\n")
+                lines.append("# Prefer `npm version`; workspace is for monorepos\n")
+                lines.append("prefer_command = true\n")
+                lines.append("workspace = false\n")
+                lines.append("\n")
 
     lines.append("\n# --- Commit Linting ---\n")
     lines.append("[commit_lint]\n")

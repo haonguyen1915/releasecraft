@@ -77,15 +77,6 @@ post_bump = []
 # Prefer `poetry version` when available
 prefer_command = true
 
-[provider.setuptools]
-# __init__ version file for setuptools projects
-version_file = "pkg/__init__.py"
-
-[provider.npm]
-# Prefer `npm version`; workspace is for monorepos
-prefer_command = true
-workspace = false
-
 
 # --- Commit Linting ---
 [commit_lint]
