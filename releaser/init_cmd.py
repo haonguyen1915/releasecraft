@@ -4,7 +4,6 @@ import os
 from pathlib import Path
 from typing import Dict, List, Optional
 
-import toml
 
 from .console import logger, prompt_choice, prompt_confirmation, prompt_input
 

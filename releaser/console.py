@@ -5,18 +5,13 @@ This module provides a centralized console interface using the rich library
 for better formatting, colors, and visual appeal throughout the releaser package.
 """
 
-import sys
-from typing import Any, Optional, Union
+from typing import Optional
 
-from rich.align import Align
 from rich.console import Console
-from rich.layout import Layout
-from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.prompt import Confirm, Prompt
 from rich.rule import Rule
-from rich.syntax import Syntax
 from rich.table import Table
 from rich.text import Text
 

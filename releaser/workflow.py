@@ -14,9 +14,8 @@ import json
 import re
 import subprocess
 from dataclasses import dataclass
-from datetime import datetime
 from enum import Enum
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 
 class BranchType(Enum):
@@ -616,7 +615,7 @@ class GitWorkflowValidator:
         for i, commit in enumerate(commits_to_show):
             if commit is None:
                 # Add visual separator for skipped commits
-                diagram.append(f'    commit id: "..."')
+                diagram.append('    commit id: "..."')
                 continue
 
             if commit["full_hash"] in processed_commits:

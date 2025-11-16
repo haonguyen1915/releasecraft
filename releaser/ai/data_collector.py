@@ -463,7 +463,7 @@ def truncate_diffs_to_budget(
         if len(diff_text) > max_chars:
             truncated[commit_hash] = (
                 diff_text[:max_chars] +
-                f"\n\n... (diff truncated to fit token budget)"
+                "\n\n... (diff truncated to fit token budget)"
             )
         else:
             truncated[commit_hash] = diff_text

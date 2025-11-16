@@ -11,7 +11,7 @@ from releaser.config.model import AppConfig
 from releaser.bump import providers
 from releaser.bump.semver import apply_prerelease, bump_base, finalize, parse
 from releaser.bump.rules import check_bump_allowed, check_prerelease_allowed
-from releaser.bump.notes import append_changelog, normalize_notes, read_notes_from_editor
+from releaser.bump.notes import normalize_notes, read_notes_from_editor
 from releaser.drafter import utils as git_utils
 from releaser.ai.generator import generate_release_notes_with_fallback
 import configparser
@@ -404,11 +404,11 @@ def run(args) -> int:
         )
 
         if not dry_run:
-            append_changelog(
+            # Use the fully rendered content with typed sections
+            from releaser.bump.notes import append_changelog_block as _append_block
+            _append_block(
                 changelog_path,
-                tag_name,
-                changelog_date,
-                notes_text,
+                changelog_content,
             )
             files_to_add.append(changelog_path)
         else:

@@ -11,10 +11,8 @@ Notes:
 
 from __future__ import annotations
 
-import pprint
 from typing import Any, Type, TypeVar, Optional, Iterable
 import difflib
-import os
 from pathlib import Path
 
 from pydantic import BaseModel
@@ -79,8 +77,6 @@ def generate_structured(
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_prompt},
     ]
-    pprint.pprint(messages)
-
     result: Any = client.chat.completions.create(
         model=model,
         temperature=temperature,

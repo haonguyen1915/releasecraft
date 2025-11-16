@@ -13,7 +13,6 @@ import logging
 import queue
 import shutil
 import subprocess
-import sys
 import threading
 from datetime import datetime
 from typing import List, Optional
