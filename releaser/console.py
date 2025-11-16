@@ -185,8 +185,51 @@ def prompt_input(message: str, default: str = "") -> str:
 
 
 def prompt_choice(message: str, choices: list, default: Optional[str] = None) -> str:
-    """Prompt for choice selection."""
-    return Prompt.ask(message, choices=choices, default=default)
+    """Prompt for choice selection with numbered options.
+
+    Args:
+        message: The question to ask
+        choices: List of choice strings
+        default: Default choice (optional)
+
+    Returns:
+        The selected choice string
+    """
+    # Format choices with numbers
+    numbered_choices = [f"{i+1}) {choice}" for i, choice in enumerate(choices)]
+
+    # Display numbered options
+    console.print()
+    for numbered_choice in numbered_choices:
+        console.print(f"  {numbered_choice}")
+    console.print()
+
+    # Create mapping from number strings to original choices
+    number_to_choice = {str(i+1): choice for i, choice in enumerate(choices)}
+
+    # Also allow full text match
+    valid_inputs = list(number_to_choice.keys()) + choices
+
+    # Determine default display
+    default_display = None
+    if default and default in choices:
+        default_num = choices.index(default) + 1
+        default_display = str(default_num)
+
+    # Prompt for input
+    response = Prompt.ask(
+        message,
+        choices=valid_inputs,
+        default=default_display,
+        show_choices=False  # We already showed them above
+    )
+
+    # Convert number input to choice text
+    if response in number_to_choice:
+        return number_to_choice[response]
+
+    # If they typed the full text, return as-is
+    return response
 
 
 def print_version_header():
