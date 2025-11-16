@@ -80,6 +80,14 @@ class AppConfig:
     bump_rules: BumpRulesConfig = field(default_factory=BumpRulesConfig)
     changelog: ChangelogConfig = field(default_factory=ChangelogConfig)
     commit_lint: CommitLintConfig = field(default_factory=CommitLintConfig)
+    
+    @dataclass
+    class CommitGenConfig:
+        history_commits: int = 10
+        demote_feat_if_similar: bool = True
+        allow_scope: bool = False
+
+    commit_gen: "AppConfig.CommitGenConfig" = field(default_factory=CommitGenConfig)
     # Safety options (e.g., allow dirty working tree)
     class SafetyConfig:
         allow_dirty: bool = False
@@ -98,9 +106,11 @@ class AppConfig:
         system_prompt_file: Optional[str] = None
         include_diff: bool = False
         max_commits: int = 200
+        always_diff_types: List[str] = field(default_factory=list)
         cache: bool = True
         accept_automatically: bool = False
         fail_on_error: bool = False
+        always_diff_types: Optional[List[str]] = None
 
     ai: "AppConfig.AiSettings" = field(default_factory=AiSettings)
     files: List[str] = field(default_factory=list)

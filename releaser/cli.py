@@ -121,6 +121,25 @@ def create_parser() -> argparse.ArgumentParser:
     )
     add_init_arguments(init_parser)
 
+    # Commit Gen
+    gen_parser = subparsers.add_parser(
+        "commit-gen",
+        help="Generate a Conventional Commit message from diffs",
+        description="Analyze staged changes or specified files and propose a Conventional Commit message.",
+    )
+    gen_parser.add_argument("--staged", action="store_true", help="Use staged changes (git diff --staged)")
+    gen_parser.add_argument("--files", nargs="*", default=[], help="Additional files to include")
+    gen_parser.add_argument("--ticket", type=str, help="Ticket reference to include as footer")
+    gen_parser.add_argument("--no-ai", dest="no_ai", action="store_true", help="Disable AI and use heuristics only")
+    gen_parser.add_argument("--model", type=str, help="AI model (default from config)")
+    gen_parser.add_argument("--temperature", type=float, help="Sampling temperature (default from config)")
+    gen_parser.add_argument("--max-tokens", dest="max_tokens", type=int, help="Max tokens (default from config)")
+    gen_parser.add_argument("--history", type=int, help="Include last N commit subjects as context (default from config; 0 to disable)")
+    gen_parser.add_argument("--system-prompt-file", type=str, help="Custom system prompt file")
+    gen_parser.add_argument("--user-prompt-file", type=str, help="Custom user prompt template file")
+    gen_parser.add_argument("--output", type=str, help="Write message to file (default: stdout)")
+    gen_parser.add_argument("--config", type=str, help="Path to config file")
+
     # Commit Lint
     lint_parser = subparsers.add_parser(
         "commit-lint",
@@ -253,6 +272,13 @@ def main(argv: Optional[list[str]] = None) -> int:
         return handle_bump_command(args)
     if args.command == "init":
         return handle_init_command(args)
+    if args.command == "commit-gen":
+        try:
+            from .commit_gen import run as run_gen
+            return run_gen(args)
+        except Exception as e:
+            logger.error(f"Commit message generation failed: {e}")
+            return 1
     if args.command == "commit-lint":
         try:
             from .commit_lint import run as run_lint

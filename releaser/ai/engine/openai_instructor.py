@@ -11,7 +11,9 @@ Notes:
 
 from __future__ import annotations
 
-from typing import Any, Type, TypeVar, Optional
+import pprint
+from typing import Any, Type, TypeVar, Optional, Iterable
+import difflib
 import os
 from pathlib import Path
 
@@ -77,6 +79,7 @@ def generate_structured(
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_prompt},
     ]
+    pprint.pprint(messages)
 
     result: Any = client.chat.completions.create(
         model=model,
@@ -182,7 +185,7 @@ def _render_template(template_str: str, **context: Any) -> str:
 
 
 def _infer_cc_from_heuristics(
-    *, files: list[str], diffs: dict[str, str] | None = None
+    *, files: list[str], diffs: dict[str, str] | None = None, allow_scope: bool = True
 ) -> CommitMessage:
     """Heuristic commit message generator when AI is unavailable.
 
@@ -241,13 +244,43 @@ def _infer_cc_from_heuristics(
 
     # Scope: choose first non-root top-level dir
     scope = None
-    for f in files:
-        parts = f.split("/")
-        if len(parts) > 1 and parts[0] not in {"tests", "docs"}:
-            scope = parts[0]
-            break
+    if allow_scope:
+        for f in files:
+            parts = f.split("/")
+            if len(parts) > 1 and parts[0] not in {"tests", "docs"}:
+                scope = parts[0]
+                break
 
     return CommitMessage(type=ctype, scope=scope, subject=subject)
+
+
+def _normalize_subject(s: str) -> str:
+    return "".join(ch for ch in s.lower().strip() if ch.isalnum() or ch.isspace())
+
+
+def _maybe_demote_feat(
+    cm: CommitMessage, diffs: dict[str, str], recent_subjects: Optional[Iterable[str]]
+) -> CommitMessage:
+    if cm.type != "feat" or not cm.subject:
+        return cm
+    subjects = list(recent_subjects or [])
+    if not subjects:
+        return cm
+    norm = _normalize_subject(cm.subject)
+    for s in subjects:
+        if not s:
+            continue
+        if difflib.SequenceMatcher(None, norm, _normalize_subject(s)).ratio() >= 0.85:
+            # Check added lines count: if relatively low, consider it an iteration
+            added = 0
+            for d in (diffs or {}).values():
+                for line in d.splitlines():
+                    if line.startswith("+") and not line.startswith("+++"):
+                        added += 1
+            if added < 40:  # heuristic threshold
+                cm.type = "refactor"
+            return cm
+    return cm
 
 
 def generate_commit_message(
@@ -259,8 +292,11 @@ def generate_commit_message(
     files: list[str],
     diffs: dict[str, str],
     ticket: str | None = None,
+    allow_scope: bool = False,
     system_prompt_file: str | None = None,
     user_prompt_file: str | None = None,
+    recent_subjects: Optional[list[str]] = None,
+    demote_feat_if_similar: bool = True,
 ) -> CommitMessage:
     """Generate a Conventional Commit message from diffs and file list.
 
@@ -268,7 +304,9 @@ def generate_commit_message(
     """
     # AI unavailable: heuristics
     if not api_key:
-        cm = _infer_cc_from_heuristics(files=files, diffs=diffs)
+        cm = _infer_cc_from_heuristics(files=files, diffs=diffs, allow_scope=allow_scope)
+        if demote_feat_if_similar:
+            cm = _maybe_demote_feat(cm, diffs, recent_subjects)
         if ticket:
             cm.footers = {"Refs": ticket}
         return cm
@@ -286,7 +324,12 @@ def generate_commit_message(
     # Render user prompt
     try:
         user_prompt = _render_template(
-            user_template, files=files, diffs=diffs, ticket=ticket or ""
+            user_template,
+            files=files,
+            diffs=diffs,
+            ticket=ticket or "",
+            allow_scope=allow_scope,
+            recent_subjects=recent_subjects or [],
         )
     except ImportError:
         # Fallback without Jinja2
@@ -301,7 +344,7 @@ def generate_commit_message(
 
     # AI path
     try:
-        return generate_structured(
+        cm = generate_structured(
             api_key=api_key,
             model=model,
             temperature=temperature,
@@ -310,9 +353,16 @@ def generate_commit_message(
             user_prompt=user_prompt,
             response_model=CommitMessage,
         )
+        if not allow_scope:
+            cm.scope = None
+        if demote_feat_if_similar:
+            cm = _maybe_demote_feat(cm, diffs, recent_subjects)
+        return cm
     except ImportError:
         # As a last resort
-        cm = _infer_cc_from_heuristics(files=files, diffs=diffs)
+        cm = _infer_cc_from_heuristics(files=files, diffs=diffs, allow_scope=allow_scope)
+        if demote_feat_if_similar:
+            cm = _maybe_demote_feat(cm, diffs, recent_subjects)
         if ticket:
             cm.footers = {"Refs": ticket}
         return cm
@@ -328,6 +378,9 @@ def generate_release_notes(
     current_version: str,
     previous_version: str,
     diffs: dict[str, str] | None = None,
+    include_diff: Optional[bool] = None,
+    max_commits: Optional[int] = None,
+    always_diff_types: Optional[list[str]] = None,
     system_prompt_file: str | None = None,
     user_prompt_file: str | None = None,
 ) -> ReleaseNotes:
@@ -403,6 +456,49 @@ def generate_release_notes(
         )
         return rn
 
+    # Determine effective options (include_diff, max_commits, always_diff_types)
+    if include_diff is None or max_commits is None or always_diff_types is None:
+        try:
+            from releaser.config.load import load_config  # type: ignore
+            from releaser.ai.config import AiConfig  # type: ignore
+            _cfg = load_config()
+            _ai = AiConfig.from_app_config(_cfg)
+        except Exception:
+            _ai = None  # type: ignore
+        if include_diff is None:
+            include_diff = bool(getattr(_ai, "include_diff", True)) if diffs else False
+        if max_commits is None:
+            max_commits = int(getattr(_ai, "max_commits", 0)) or None
+        if always_diff_types is None:
+            always_diff_types = list(getattr(_ai, "always_diff_types", []) or [])
+
+    # Limit commits per max_commits (most recent first as provided)
+    commits_limited = commits[: max_commits] if max_commits else commits
+
+    # Filter diffs by include_diff and always_diff_types
+    def _ctype(msg: str) -> str:
+        # Parse conventional commit type from message header
+        head = (msg or "").split(":", 1)[0]
+        head = head.split("(", 1)[0]
+        return head.strip().lower()
+
+    selected_diffs: dict[str, str] = {}
+    if diffs and (include_diff or always_diff_types):
+        if include_diff:
+            selected_diffs = dict(diffs)
+        else:
+            # Include diffs only for commits matching types in always_diff_types
+            type_set = {t.strip().lower() for t in (always_diff_types or []) if t}
+            if type_set:
+                for c in commits_limited:
+                    try:
+                        ctype = _ctype(str(c.get("message", "")))
+                        chash = str(c.get("hash", ""))
+                        if ctype in type_set and chash in (diffs or {}):
+                            selected_diffs[chash] = diffs[chash]
+                    except Exception:
+                        continue
+
     # Load templates
     system_template = _load_template(
         custom_path=system_prompt_file,
@@ -418,14 +514,14 @@ def generate_release_notes(
     try:
         user_prompt = _render_template(
             user_template,
-            commits=commits,
+            commits=commits_limited,
             current_version=current_version,
             previous_version=previous_version,
-            diffs=diffs or {},
+            diffs=selected_diffs,
         )
     except ImportError:
         # Fallback rendering without Jinja2
-        commit_lines = "\n".join(f"- {c.get('message','')} ({c.get('hash','')[:7]})" for c in commits)
+        commit_lines = "\n".join(f"- {c.get('message','')} ({c.get('hash','')[:7]})" for c in commits_limited)
         user_prompt = (
             f"Target version: {current_version}\nPrevious version: {previous_version}\n\n"
             f"Commits since last release:\n{commit_lines}\n\n"

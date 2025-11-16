@@ -9,7 +9,7 @@ from releaser.ai.schemas import CommitMessage
 def test_generate_commit_message_heuristic_docs():
     cm = generate_commit_message(
         api_key=None,  # force heuristic path
-        model="gpt-4o-mini",
+        model="gpt-4o",
         temperature=0.2,
         max_tokens=400,
         files=["docs/README.md", "CHANGELOG.md"],
@@ -36,3 +36,19 @@ def test_generate_commit_message_heuristic_fix():
     )
     assert cm.type == "fix"
 
+
+def test_generate_commit_message_no_scope_flag():
+    cm = generate_commit_message(
+        api_key=None,
+        model="gpt-4o-mini",
+        temperature=0.2,
+        max_tokens=400,
+        files=["releaser/cli.py"],
+        diffs={"releaser/cli.py": "+ add new parser"},
+        allow_scope=False,
+    )
+    # scope should be None and header should not include parentheses
+    assert cm.scope is None
+    header = cm.to_text().splitlines()[0]
+    assert header.startswith("chore:") or header.startswith("feat:") or header.startswith("fix:")
+    assert "(" not in header

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass
@@ -15,10 +15,10 @@ class AiConfig:
     system_prompt_file: str | None = None
     include_diff: bool = False
     max_commits: int = 200
+    always_diff_types: list[str] = field(default_factory=list)
     cache: bool = True
     accept_automatically: bool = False
     fail_on_error: bool = False
-    always_diff_types: list[str] | None = None  # Commit types that always include diffs
 
     @staticmethod
     def from_app_config(cfg) -> "AiConfig":
@@ -36,9 +36,8 @@ class AiConfig:
             system_prompt_file=getattr(ai, "system_prompt_file", None),
             include_diff=getattr(ai, "include_diff", False),
             max_commits=getattr(ai, "max_commits", 200),
+            always_diff_types=list(getattr(ai, "always_diff_types", []) or []),
             cache=getattr(ai, "cache", True),
             accept_automatically=getattr(ai, "accept_automatically", False),
             fail_on_error=getattr(ai, "fail_on_error", False),
-            always_diff_types=getattr(ai, "always_diff_types", None),
         )
-

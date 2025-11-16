@@ -110,12 +110,19 @@ def _merge_into_config(cfg: AppConfig, data: Dict[str, Any]) -> None:
                 cfg.ai.max_commits = int(ai.get("max_commits"))
             except Exception:
                 pass
+        if "always_diff_types" in ai:
+            try:
+                cfg.ai.always_diff_types = list(ai.get("always_diff_types") or [])
+            except Exception:
+                cfg.ai.always_diff_types = []
         if "cache" in ai:
             cfg.ai.cache = bool(ai.get("cache"))
         if "accept_automatically" in ai:
             cfg.ai.accept_automatically = bool(ai.get("accept_automatically"))
         if "fail_on_error" in ai:
             cfg.ai.fail_on_error = bool(ai.get("fail_on_error"))
+        if "always_diff_types" in ai:
+            cfg.ai.always_diff_types = list(ai.get("always_diff_types") or [])
 
     # Commit lint block (optional)
     cl = data.get("commit_lint", {}) or {}
@@ -147,6 +154,134 @@ def _merge_into_config(cfg: AppConfig, data: Dict[str, Any]) -> None:
             cfg.commit_lint.skip_merge_commits = bool(cl.get("skip_merge_commits"))
         if "skip_revert_commits" in cl:
             cfg.commit_lint.skip_revert_commits = bool(cl.get("skip_revert_commits"))
+
+    # Commit gen block (optional)
+    cg = data.get("commit_gen", {}) or {}
+    if cg:
+        if "history_commits" in cg:
+            try:
+                cfg.commit_gen.history_commits = int(cg.get("history_commits"))
+            except Exception:
+                pass
+        if "demote_feat_if_similar" in cg:
+            cfg.commit_gen.demote_feat_if_similar = bool(cg.get("demote_feat_if_similar"))
+        if "allow_scope" in cg:
+            cfg.commit_gen.allow_scope = bool(cg.get("allow_scope"))
+
+    # New schema: [llm] mirrors AI settings
+    llm = data.get("llm", {}) or {}
+    if llm:
+        if "enabled" in llm:
+            cfg.ai.enabled = bool(llm.get("enabled"))
+        if "model" in llm:
+            cfg.ai.model = str(llm.get("model") or cfg.ai.model)
+        if "api_key_env" in llm:
+            cfg.ai.api_key_env = str(llm.get("api_key_env") or cfg.ai.api_key_env)
+        if "temperature" in llm:
+            try:
+                cfg.ai.temperature = float(llm.get("temperature"))
+            except Exception:
+                pass
+        if "max_tokens" in llm:
+            try:
+                cfg.ai.max_tokens = int(llm.get("max_tokens"))
+            except Exception:
+                pass
+
+    # New schema alias: [llm-config]
+    llmc = data.get("llm-config", {}) or {}
+    if llmc:
+        if "enabled" in llmc:
+            cfg.ai.enabled = bool(llmc.get("enabled"))
+        if "model" in llmc:
+            cfg.ai.model = str(llmc.get("model") or cfg.ai.model)
+        if "api_key_env" in llmc:
+            cfg.ai.api_key_env = str(llmc.get("api_key_env") or cfg.ai.api_key_env)
+        if "temperature" in llmc:
+            try:
+                cfg.ai.temperature = float(llmc.get("temperature"))
+            except Exception:
+                pass
+        if "max_tokens" in llmc:
+            try:
+                cfg.ai.max_tokens = int(llmc.get("max_tokens"))
+            except Exception:
+                pass
+        if "prompt_release_notes_file" in llmc:
+            cfg.ai.prompt_release_notes_file = llmc.get("prompt_release_notes_file")
+        if "system_prompt_file" in llmc:
+            cfg.ai.system_prompt_file = llmc.get("system_prompt_file")
+        if "include_diff" in llmc:
+            cfg.ai.include_diff = bool(llmc.get("include_diff"))
+        if "max_commits" in llmc:
+            try:
+                cfg.ai.max_commits = int(llmc.get("max_commits"))
+            except Exception:
+                pass
+        if "always_diff_types" in llmc:
+            try:
+                cfg.ai.always_diff_types = list(llmc.get("always_diff_types") or [])
+            except Exception:
+                cfg.ai.always_diff_types = []
+        if "cache" in llmc:
+            cfg.ai.cache = bool(llmc.get("cache"))
+        if "accept_automatically" in llmc:
+            cfg.ai.accept_automatically = bool(llmc.get("accept_automatically"))
+        if "fail_on_error" in llmc:
+            cfg.ai.fail_on_error = bool(llmc.get("fail_on_error"))
+
+    # New schema: [release] aggregates defaults/changelog/safety
+    rel = data.get("release", {}) or {}
+    if rel:
+        if "create_commit" in rel:
+            cfg.defaults.commit = bool(rel.get("create_commit"))
+        if "create_tag" in rel:
+            cfg.defaults.tag = bool(rel.get("create_tag"))
+        if "push" in rel:
+            cfg.defaults.push = bool(rel.get("push"))
+        if "change_log_file" in rel:
+            cfg.changelog.file = str(rel.get("change_log_file") or cfg.changelog.file)
+        if "allow_dirty" in rel:
+            cfg.safety.allow_dirty = bool(rel.get("allow_dirty"))
+        # strategy is currently informational; range is still derived from tags
+
+        # Nested: [release.pre_release]
+        rpre = rel.get("pre_release", {}) or {}
+        if rpre:
+            if "enabled" in rpre:
+                cfg.pre_release.enabled = bool(rpre.get("enabled"))
+            if "default_channel" in rpre:
+                cfg.pre_release.default_channel = str(rpre.get("default_channel") or cfg.pre_release.default_channel)
+            if "auto_increment" in rpre:
+                cfg.pre_release.auto_increment = bool(rpre.get("auto_increment"))
+            if "reset_on_bump" in rpre:
+                cfg.pre_release.reset_on_bump = bool(rpre.get("reset_on_bump"))
+
+        # Nested: [release.auto_gen_notes]
+        rn = rel.get("auto_gen_notes", {}) or {}
+        if rn:
+            if "enabled" in rn:
+                cfg.changelog.enabled = bool(rn.get("enabled"))
+            if "include_diff" in rn:
+                cfg.ai.include_diff = bool(rn.get("include_diff"))
+            if "max_commits" in rn:
+                try:
+                    cfg.ai.max_commits = int(rn.get("max_commits"))
+                except Exception:
+                    pass
+            if "mode" in rn:
+                cfg.changelog.mode = str(rn.get("mode") or cfg.changelog.mode)
+
+    # New schema: [auto_gen_commit] mirrors commit_gen
+    agc = data.get("auto_gen_commit", {}) or {}
+    if agc:
+        if "history_commits" in agc:
+            try:
+                cfg.commit_gen.history_commits = int(agc.get("history_commits"))
+            except Exception:
+                pass
+        if "demote_feat_if_similar" in agc:
+            cfg.commit_gen.demote_feat_if_similar = bool(agc.get("demote_feat_if_similar"))
 
 
 def load_config(config_path: Optional[str] = None) -> AppConfig:

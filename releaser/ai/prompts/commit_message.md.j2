@@ -10,13 +10,27 @@ Context
 
 {% endfor %}
 
+Recent commit headers (last {{ recent_subjects|length }}):
+{% for s in recent_subjects %}- {{ s }}
+{% endfor %}
+
 Task
 - Write a Conventional Commit message based on the changes.
 - Choose the best type (feat, fix, docs, chore, refactor, perf, test, build, ci, revert, style).
-- Use a short subject in imperative mood; include a scope if appropriate.
+- Use a short subject in imperative mood.
+{% if allow_scope %}- Include a scope only if clearly beneficial.
+{% else %}- Do NOT include a scope; use only `type: subject`.
+{% endif %}
 - Add a brief body if helpful; include a BREAKING CHANGE footer if warranted.
 {% if ticket %}- Add a `Refs: {{ ticket }}` footer if relevant.
 {% endif %}
+
+Constraints
+- Subject MUST be <= 50 characters; no trailing period.
+- Wrap body lines at <= 72 characters; keep body to at most 4 lines.
+- Prefer clarity over detail; eliminate redundancy with the file list above.
+- Avoid lists/code blocks; use 1–2 concise sentences in body if included.
+- Avoid repeating or paraphrasing recent subjects above; if this change iterates on a recent commit, prefer refactor/chore/fix over feat.
 
 Return a structured response with:
 - type
