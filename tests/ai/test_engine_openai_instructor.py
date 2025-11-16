@@ -5,7 +5,7 @@ import tempfile
 import pytest
 
 from releaser.ai.engine import openai_instructor as eng
-from releaser.ai.schemas import ReleaseNotes, Section
+from releaser.ai.schemas import ReleaseNotes
 
 
 class FakeInst:
@@ -17,10 +17,8 @@ class FakeInst:
                     # Simulate Instructor returning a ReleaseNotes instance
                     return ReleaseNotes(
                         summary="Summary text",
-                        sections=[],
                         highlights=["One"],
                         breaking_changes=[],
-                        limitations=[],
                     )
 
             completions = Completions()

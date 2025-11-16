@@ -13,6 +13,7 @@ from releaser.bump.semver import apply_prerelease, bump_base, finalize, parse
 from releaser.bump.rules import check_bump_allowed, check_prerelease_allowed
 from releaser.bump.notes import append_changelog, normalize_notes, read_notes_from_editor
 from releaser.drafter import utils as git_utils
+from releaser.ai.generator import generate_release_notes_with_fallback
 import configparser
 import re
 from pathlib import Path
@@ -205,6 +206,74 @@ def run(args) -> int:
 
     # Notes handling
     notes_text = _read_notes_from_flags(getattr(args, "notes", None), getattr(args, "notes_file", None))
+
+    # AI-powered release notes generation
+    if not notes_text and cfg.ai.enabled and not getattr(args, "no_commit", False) and not getattr(args, "no_tag", False):
+        logger.info("AI is enabled, generating release notes...")
+        try:
+            # Get the latest git tag for the previous version
+            previous_tag = git_utils.get_latest_tag()
+            if not previous_tag:
+                logger.warning("No previous tag found, getting all commits from repository start")
+                # Get the first commit in the repository
+                import subprocess
+                result = subprocess.run(
+                    ["git", "rev-list", "--max-parents=0", "HEAD"],
+                    capture_output=True,
+                    text=True,
+                    check=False
+                )
+                if result.returncode == 0 and result.stdout.strip():
+                    previous_tag = result.stdout.strip()
+                else:
+                    # Ultimate fallback: use HEAD itself (will show 0 commits but won't crash)
+                    logger.warning("Could not determine first commit, using HEAD")
+                    previous_tag = "HEAD"
+
+            ai_notes = generate_release_notes_with_fallback(
+                config=cfg.ai,
+                repo_path=Path.cwd(),
+                current_version=str(target_version),
+                previous_version=previous_tag,
+            )
+
+            if ai_notes:
+                # Show AI-generated notes
+                bordered.create_bordered_content(
+                    ai_notes,
+                    title="AI-GENERATED RELEASE NOTES",
+                    dry_run=False,
+                )
+
+                # Allow review/editing unless auto-accept is enabled
+                if cfg.ai.accept_automatically:
+                    logger.info("Auto-accepting AI-generated notes (accept_automatically=True)")
+                    notes_text = ai_notes
+                else:
+                    # Ask user if they want to use, edit, or reject
+                    choice = prompt_choice(
+                        "How would you like to proceed?",
+                        [
+                            "Use AI notes as-is",
+                            "Edit AI notes in editor",
+                            "Reject and write manually",
+                        ],
+                        default="Use AI notes as-is"
+                    )
+
+                    if choice == "Use AI notes as-is":
+                        notes_text = ai_notes
+                    elif choice == "Edit AI notes in editor":
+                        # Open in editor with AI notes pre-filled
+                        notes_text = read_notes_from_editor(initial_text=ai_notes)
+                    # else: Reject, will fall through to manual prompt
+        except Exception as e:
+            logger.error(f"AI generation failed: {e}")
+            if cfg.ai.fail_on_error:
+                raise
+            logger.warning("Falling back to manual release notes entry")
+
+    # Manual notes entry (if still no notes)
     if not notes_text and not getattr(args, "no_commit", False) and not getattr(args, "no_tag", False):
         # Simple Yes/No flow; Yes = type inline multi-line, finish with two blank lines
         if prompt_confirmation("Add release notes?", default=False):

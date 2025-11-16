@@ -1,52 +1,40 @@
-Generate comprehensive release notes for version **{{ current_version }}** (upgrading from {{ previous_version }}).
+Generate concise, high-impact release notes for version **{{ current_version }}** (from {{ previous_version }}).
 
-## Repository Information
-- **Previous Version**: {{ previous_version }}
-- **New Version**: {{ current_version }}
-- **Total Commits**: {{ commits|length }}
-
-## Commit History
+## Commits ({{ commits|length }} total)
 {% for commit in commits %}
-**{{ commit.hash[:8] }}** - {{ commit.message }}
-  - Author: {{ commit.author }}
-  - Date: {{ commit.date }}
+- **{{ commit.hash[:8] }}**: {{ commit.message }}
 {% endfor %}
 
 {% if diffs %}
----
 
-## Code Changes (Important/Unclear Commits)
+## Code Changes (for context)
 
-The following commits have code diffs provided for additional context. Use these to better understand the scope and impact of changes:
+The following diffs provide additional context for important commits:
 
 {% for commit_hash, diff_text in diffs.items() %}
-### Commit {{ commit_hash[:8] }}
-
+**{{ commit_hash[:8] }}**:
 ```diff
-{{ diff_text[:3000] }}{% if diff_text|length > 3000 %}
-
-... (diff truncated for brevity)
-{% endif %}
+{{ diff_text[:2000] }}{% if diff_text|length > 2000 %} ... (truncated){% endif %}
 ```
-
 {% endfor %}
 {% endif %}
 
 ---
 
-## Instructions
+## Your Task
 
-Please analyze the above commits{% if diffs %} and code changes{% endif %} to generate structured release notes following these requirements:
+Create release notes with **3-5 impactful highlights** that capture what truly matters in this release.
 
-1. **Summary**: Provide a 1-2 sentence overview of this release's purpose and main themes
-2. **Highlights**: List 2-5 most impactful changes that users will care about most
-3. **Breaking Changes**: Identify any breaking changes that require user action (look for "!" or "BREAKING CHANGE")
-4. **Sections**: Organize remaining changes into logical groups:
-   - **Features**: New capabilities (from `feat:` commits)
-   - **Bug Fixes**: Issues resolved (from `fix:` commits)
-   - **Improvements**: Performance, UX, or quality enhancements
-   - **Documentation**: Significant doc updates
-   - Other relevant categories as needed
-5. **Limitations**: Note any known issues or limitations (if apparent from commits)
+**Remember**:
+- Commits already use conventional types (feat:, fix:, etc.) - don't repeat that categorization
+- Focus on HIGH-LEVEL impact, not granular details
+- Combine related commits into themes
+- Skip minor changes (chores, docs, tests unless significant)
+- Be concise and action-oriented
 
-Focus on **user impact** rather than technical implementation details. Use clear, action-oriented language.
+**Output**:
+1. **summary** (optional): One sentence describing the release theme
+2. **highlights**: 3-5 punchy bullet points of the most important changes
+3. **breaking_changes**: Any breaking changes (look for "!" or "BREAKING CHANGE")
+
+Quality over quantity!

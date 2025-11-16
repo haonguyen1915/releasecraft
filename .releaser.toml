@@ -27,7 +27,7 @@ mode = "auto"
 allow_dirty = false
 
 [ai]
-enabled = false
+enabled = true
 provider = "openai"
 model = "gpt-4o-mini"
 api_key_env = "OPENAI_API_KEY"
