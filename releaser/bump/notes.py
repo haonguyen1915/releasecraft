@@ -30,14 +30,20 @@ def normalize_notes(notes: Optional[str]) -> str:
 
 
 def append_changelog(changelog_path: str, tag_name: str, date_str: str, notes: str) -> None:
+    """Append a new changelog entry at the top, creating the file if missing.
+
+    If the file does not exist (first time), a top-level title is added.
+    """
     header = f"## {tag_name} – {date_str}\n\n"
     block = header
     if notes:
         block += notes.strip() + "\n\n"
     p = Path(changelog_path)
+    title = "# Changelog\n\n"
     if p.exists():
         existing = p.read_text()
+        # Prepend block to existing content
         p.write_text(block + existing)
     else:
-        p.write_text(block)
-
+        # Create with title and first block
+        p.write_text(title + block)

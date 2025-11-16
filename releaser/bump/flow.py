@@ -206,21 +206,9 @@ def run(args) -> int:
     # Notes handling
     notes_text = _read_notes_from_flags(getattr(args, "notes", None), getattr(args, "notes_file", None))
     if not notes_text and not getattr(args, "no_commit", False) and not getattr(args, "no_tag", False):
-        # Interactive prompt for release notes
-        choice = prompt_choice(
-            "Add release notes?",
-            ["None", "Write notes (open $EDITOR)", "Read from file"],
-            default="None",
-        )
-        if choice.startswith("Write"):
-            notes_text = read_notes_from_editor("")
-        elif choice.startswith("Read"):
-            path = prompt_input("Path to notes file", default="RELEASE_NOTES.md")
-            try:
-                with open(path, "r") as f:
-                    notes_text = f.read().strip()
-            except Exception:
-                logger.warning(f"Could not read notes file: {path}")
+        # Simple Yes/No flow; Yes = type inline multi-line, finish with two blank lines
+        if prompt_confirmation("Add release notes?", default=False):
+            notes_text = _prompt_multiline_notes()
 
     notes_text = normalize_notes(notes_text)
 
@@ -271,8 +259,13 @@ def run(args) -> int:
         else:
             logger.info(f"Would update changelog: {changelog_path}")
             # Show a bordered preview of the content that would be added
+            # For first-time creation, include a title
+            from pathlib import Path as _P
+            preview = changelog_content
+            if not _P(changelog_path).exists():
+                preview = "# Changelog\n\n" + preview
             bordered.create_bordered_content(
-                changelog_content,
+                preview,
                 title="CHANGELOG PREVIEW",
                 dry_run=True,
             )
@@ -548,6 +541,28 @@ def _update_additional_file_version(path_str: str, selector: str, version: str, 
         p.write_text(content)
         files_to_add.append(str(p))
         return
+
+
+def _prompt_multiline_notes() -> str:
+    logger.info("Enter release notes (finish with two empty lines):")
+    lines: list[str] = []
+    empty_line_count = 0
+    while True:
+        try:
+            line = input()
+        except EOFError:
+            break
+        if line.strip() == "":
+            empty_line_count += 1
+            if empty_line_count >= 2:
+                if lines and lines[-1] == "":
+                    lines.pop()
+                break
+            lines.append(line)
+        else:
+            empty_line_count = 0
+            lines.append(line)
+    return "\n".join(lines).strip()
 
     # setup.cfg: metadata.version
     if p.name == "setup.cfg" and selector == "metadata.version":
