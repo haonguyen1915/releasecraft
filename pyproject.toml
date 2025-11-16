@@ -1,89 +1,34 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = [ "setuptools>=61.0", "wheel",]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "releasecraft"
-version = "0.3.0"
+version = "0.3.0-rc.1"
 description = "A CLI tool for generating releases and changelogs, and streaming out stdout in a fancy way."
 readme = "README.md"
-license = { text = "MIT" }
-authors = [
-    { name = "haonguyen", email = "vanhao1915@gmail.com" },
-]
-classifiers = [
-    "Development Status :: 3 - Alpha",
-    "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-]
+classifiers = [ "Development Status :: 3 - Alpha", "Intended Audience :: Developers", "License :: OSI Approved :: MIT License", "Programming Language :: Python :: 3", "Programming Language :: Python :: 3.9", "Programming Language :: Python :: 3.10", "Programming Language :: Python :: 3.11", "Programming Language :: Python :: 3.12",]
 requires-python = ">=3.9,<4.0"
-dependencies = [
-    "click>=8.0.0",
-    "requests>=2.25.0",
-    "PyYAML>=5.4.0",
-    "GitPython>=3.1.0",
-    "tabulate>=0.8.7",
-    "packaging>=20.0",
-    "pyfiglet==1.0.3",
-    "matplotlib>=3.3.0",
-    "python-socketio==5.13.0",
-    "toml>=0.10.2,<0.11.0",
-    "instructor (>=1.13.0,<2.0.0)"
-]
+dependencies = [ "click>=8.0.0", "requests>=2.25.0", "PyYAML>=5.4.0", "GitPython>=3.1.0", "tabulate>=0.8.7", "packaging>=20.0", "pyfiglet==1.0.3", "matplotlib>=3.3.0", "python-socketio==5.13.0", "toml>=0.10.2,<0.11.0", "instructor (>=1.13.0,<2.0.0)",]
+[[project.authors]]
+name = "haonguyen"
+email = "vanhao1915@gmail.com"
+
+[project.license]
+text = "MIT"
 
 [project.optional-dependencies]
-dev = [
-    "pytest>=7.0.0",
-    "pytest-cov>=4.0.0",
-    "black>=22.0.0",
-    "flake8>=5.0.0",
-    "mypy>=1.0.0",
-]
+dev = [ "pytest>=7.0.0", "pytest-cov>=4.0.0", "black>=22.0.0", "flake8>=5.0.0", "mypy>=1.0.0",]
 
 [project.scripts]
 releaser = "releaser.cli:main"
 release-drafter = "releaser.drafter.release_generator:main"
 
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["releaser*"]
-exclude = ["tests*"]
-
 [tool.black]
 line-length = 88
-target-version = ['py39']
-include = '\.pyi?$'
-extend-exclude = '''
-/(
-  # directories
-  \.eggs
-  | \.git
-  | \.hg
-  | \.mypy_cache
-  | \.tox
-  | \.venv
-  | build
-  | dist
-)/
-'''
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-python_files = ["test_*.py"]
-python_classes = ["Test*"]
-python_functions = ["test_*"]
-addopts = [
-    "--strict-markers",
-    "--strict-config",
-    "--cov=releaser",
-    "--cov-report=term-missing",
-    "--cov-report=html",
-]
+target-version = [ "py39",]
+include = "\\.pyi?$"
+extend-exclude = "/(\n  # directories\n  \\.eggs\n  | \\.git\n  | \\.hg\n  | \\.mypy_cache\n  | \\.tox\n  | \\.venv\n  | build\n  | dist\n)/\n"
 
 [tool.mypy]
 python_version = "3.9"
@@ -99,78 +44,32 @@ warn_unused_ignores = true
 warn_no_return = true
 warn_unreachable = true
 strict_equality = true
+[[tool.mypy.overrides]]
+module = [ "tests.*",]
+disallow_untyped_defs = false
 
 [tool.flake8]
 max-line-length = 100
-extend-ignore = [
-    "E203",  # whitespace before ':' (black compatibility)
-    "W503",  # line break before binary operator
-    "E501",  # line too long
-    "E402",  # module import not at top (for lazy imports)
-]
-exclude = [
-  ".git",
-  "__pycache__",
-  "build",
-  "dist",
-  ".venv",
-  ".pytest_cache",
-]
+extend-ignore = [ "E203", "W503", "E501", "E402",]
+exclude = [ ".git", "__pycache__", "build", "dist", ".venv", ".pytest_cache",]
+
+[tool.pytest.ini_options]
+testpaths = [ "tests",]
+python_files = [ "test_*.py",]
+python_classes = [ "Test*",]
+python_functions = [ "test_*",]
+addopts = [ "--strict-markers", "--strict-config", "--cov=releaser", "--cov-report=term-missing", "--cov-report=html",]
 
 [tool.pylint.main]
 jobs = 1
 persistent = false
 extension-pkg-whitelist = ""
-ignore-patterns = ["tests/.*"]
+ignore-patterns = [ "tests/.*",]
 
 [tool.pylint.messages_control]
-disable = [
-  "missing-module-docstring",
-  "missing-class-docstring",
-  "missing-function-docstring",
-  "line-too-long",
-  "import-outside-toplevel",
-  "unused-argument",
-  "unused-variable",
-  "too-many-locals",
-  "too-many-statements",
-  "too-many-arguments",
-  "too-many-branches",
-  "too-many-instance-attributes",
-  "too-many-positional-arguments",
-  "too-many-nested-blocks",
-  "broad-exception-caught",
-  "broad-exception-raised",
-  "invalid-name",
-  "import-error",
-  # Style and complexity warnings
-  "no-else-return",
-  "too-many-return-statements",
-  "too-few-public-methods",
-  "duplicate-code",
-  # Code quality suggestions
-  "logging-fstring-interpolation",
-  "consider-using-with",
-  "unnecessary-comprehension",
-  "using-constant-test",
-  "raise-missing-from",
-  "consider-using-sys-exit",
-  # Import warnings
-  "reimported",
-  "wrong-import-order",
-  "cyclic-import",
-  "redefined-outer-name",
-  # Subprocess and file handling
-  "subprocess-run-check",
-  "unspecified-encoding",
-  # Other warnings
-  "arguments-differ",
-  "possibly-unused-variable",
-  "no-member",
-]
+disable = [ "missing-module-docstring", "missing-class-docstring", "missing-function-docstring", "line-too-long", "import-outside-toplevel", "unused-argument", "unused-variable", "too-many-locals", "too-many-statements", "too-many-arguments", "too-many-branches", "too-many-instance-attributes", "too-many-positional-arguments", "too-many-nested-blocks", "broad-exception-caught", "broad-exception-raised", "invalid-name", "import-error", "no-else-return", "too-many-return-statements", "too-few-public-methods", "duplicate-code", "logging-fstring-interpolation", "consider-using-with", "unnecessary-comprehension", "using-constant-test", "raise-missing-from", "consider-using-sys-exit", "reimported", "wrong-import-order", "cyclic-import", "redefined-outer-name", "subprocess-run-check", "unspecified-encoding", "arguments-differ", "possibly-unused-variable", "no-member",]
 
-[[tool.mypy.overrides]]
-module = [
-    "tests.*",
-]
-disallow_untyped_defs = false 
+[tool.setuptools.packages.find]
+where = [ ".",]
+include = [ "releaser*",]
+exclude = [ "tests*",]
