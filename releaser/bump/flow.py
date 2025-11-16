@@ -120,10 +120,13 @@ def run(args) -> int:
         repo_present = _Path(".git").exists()
         if not getattr(args, "dry_run", False) and repo_present:
             if git_utils.has_uncommitted_changes():
-                logger.warning(
-                    "Uncommitted changes detected. Please commit or stash your changes before releasing."
-                )
-                return 1
+                if getattr(cfg, "safety", None) and getattr(cfg.safety, "allow_dirty", False):
+                    logger.warning("Uncommitted changes detected; continuing due to safety.allow_dirty=true")
+                else:
+                    logger.warning(
+                        "Uncommitted changes detected. Please commit or stash your changes before releasing."
+                    )
+                    return 1
     except Exception:
         # If the check fails unexpectedly, be safe and abort only when not dry-run
         if not getattr(args, "dry_run", False):
@@ -221,8 +224,8 @@ def run(args) -> int:
 
     notes_text = normalize_notes(notes_text)
 
-    # Auto apply changelog from config when enabled (if no explicit flags)
-    if not getattr(args, "changelog", False) and not dry_run and cfg.changelog.enabled:
+    # Auto apply changelog from config when enabled (preview even in dry-run)
+    if not getattr(args, "changelog", False) and cfg.changelog.enabled:
         setattr(args, "changelog", True)
         if not getattr(args, "changelog_file", None):
             setattr(args, "changelog_file", cfg.changelog.file or "CHANGELOG.md")
@@ -253,9 +256,9 @@ def run(args) -> int:
         changelog_path = getattr(args, "changelog_file", None) or "CHANGELOG.md"
         # Prepare changelog content for preview or write
         changelog_date = datetime.date.today().isoformat()
-        changelog_content = f"## {tag_name} – {changelog_date}\n\n"
-        if notes_text:
-            changelog_content += notes_text.strip() + "\n\n"
+        changelog_content = _build_changelog_content(
+            cfg, current_version, tag_prefix, target_version, changelog_date, notes_text
+        )
 
         if not dry_run:
             append_changelog(
@@ -411,6 +414,122 @@ def _interactive_pick_bump3(
                     return "manual", manual, False, False
                 return k, None, p, fz
         console.print("[yellow]Please enter a valid number from the list[/yellow]")
+
+
+def _build_changelog_content(
+    cfg: AppConfig,
+    current_version: str,
+    tag_prefix: str,
+    new_version: str,
+    date_str: str,
+    notes_text: str,
+) -> str:
+    tag_name = f"{tag_prefix}{new_version}"
+    header = f"## {tag_name} – {date_str}\n\n"
+
+    body = ""
+    # If auto mode and git repo present, derive content from commits
+    repo_present = Path(".git").exists()
+    if cfg.changelog.mode.lower() == "auto" and repo_present:
+        try:
+            previous_tag = git_utils.get_latest_tag()
+            entries = git_utils.get_commits_since_tag(previous_tag)
+            sections: dict[str, list[str]] = {
+                "feat": [],
+                "fix": [],
+                "hotfix": [],
+                "docs": [],
+                "refactor": [],
+                "perf": [],
+                "test": [],
+                "ci": [],
+                "build": [],
+                "style": [],
+                "revert": [],
+                "chore": [],
+                "other": [],
+            }
+            for line in entries or []:
+                if not line.strip():
+                    continue
+                parts = line.split("|", 2)
+                sha = parts[0] if parts else ""
+                subject = parts[1] if len(parts) > 1 else line
+                ctype = git_utils.parse_commit_type(subject)
+                ctype = (ctype or "other").lower()
+                if ctype not in sections:
+                    ctype = "other"
+                bullet = f"- {subject.strip()} ({sha[:7]})"
+                sections[ctype].append(bullet)
+
+            section_titles = [
+                ("feat", "Features"),
+                ("fix", "Bug Fixes"),
+                ("hotfix", "Hotfixes"),
+                ("docs", "Documentation"),
+                ("refactor", "Refactoring"),
+                ("perf", "Performance"),
+                ("test", "Tests"),
+                ("ci", "CI"),
+                ("build", "Build"),
+                ("style", "Styles"),
+                ("revert", "Reverts"),
+                ("chore", "Chores"),
+                ("other", "Other"),
+            ]
+            for key, title in section_titles:
+                items = [b for b in sections.get(key, []) if b.strip()]
+                if items:
+                    body += f"### {title}\n\n" + "\n".join(items) + "\n\n"
+
+            # Append contributors and compare link
+            try:
+                contributors = git_utils.get_contributors(previous_tag)
+                contributors = _normalize_contributors(contributors)
+            except Exception:
+                contributors = ""
+            try:
+                repo_url = git_utils.get_repo_url()
+            except Exception:
+                repo_url = ""
+            if contributors:
+                body += f"**Contributors:** {contributors}\n\n"
+            if repo_url and previous_tag:
+                body += f"**Compare changes:** [{previous_tag}...{tag_name}]({repo_url}/-/compare/{previous_tag}...{tag_name})\n\n"
+        except Exception:
+            # Fallback silently to notes only
+            body = ""
+
+    # Include user-provided notes (top) if present
+    if notes_text:
+        body = f"### Release Notes\n\n{notes_text.strip()}\n\n" + body
+
+    return header + body
+
+
+def _normalize_contributors(contributors_line: str) -> str:
+    """Deduplicate contributors ignoring case/diacritics and whitespace.
+
+    Input: "@Name A, @name a, @Náme A" -> "@Name A"
+    Preserves the first encountered display name for each normalized key.
+    """
+    if not contributors_line:
+        return ""
+    parts = [p.strip() for p in contributors_line.split(",") if p.strip()]
+    seen = {}
+    order = []
+    for p in parts:
+        disp = p
+        if disp.startswith("@"):
+            disp = disp[1:]
+        key = " ".join(disp.strip().split())
+        key = unicodedata.normalize("NFKD", key)
+        key = "".join(ch for ch in key if not unicodedata.combining(ch))
+        key = key.casefold()
+        if key not in seen:
+            seen[key] = disp
+            order.append(key)
+    return ", ".join(f"@{seen[k]}" for k in order)
 
 
 def _update_additional_file_version(path_str: str, selector: str, version: str, files_to_add: list[str]) -> None:

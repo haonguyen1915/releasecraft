@@ -56,6 +56,13 @@ def _merge_into_config(cfg: AppConfig, data: Dict[str, Any]) -> None:
             cfg.changelog.enabled = bool(changelog.get("enabled"))
         if "file" in changelog:
             cfg.changelog.file = str(changelog.get("file"))
+        if "mode" in changelog:
+            cfg.changelog.mode = str(changelog.get("mode"))
+
+    safety = data.get("safety", {}) or {}
+    if safety:
+        if "allow_dirty" in safety:
+            cfg.safety.allow_dirty = bool(safety.get("allow_dirty"))
 
     # Prefer new key 'version_targets', but support legacy 'files' for backward compatibility
     files = data.get("version_targets")

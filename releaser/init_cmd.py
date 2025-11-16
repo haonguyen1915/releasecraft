@@ -115,6 +115,10 @@ def run(args) -> int:
         "changelog": {
             "enabled": True,
             "file": "CHANGELOG.md",
+            "mode": "auto",
+        },
+        "safety": {
+            "allow_dirty": False,
         },
     }
 

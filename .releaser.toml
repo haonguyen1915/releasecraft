@@ -21,6 +21,10 @@ block = []
 [changelog]
 enabled = true
 file = "CHANGELOG.md"
+mode = "auto"
+
+[safety]
+allow_dirty = true
 
 [version]
 strategy = "auto"

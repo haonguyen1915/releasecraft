@@ -39,6 +39,7 @@ class BumpRulesConfig:
 class ChangelogConfig:
     enabled: bool = False
     file: str = "CHANGELOG.md"
+    mode: str = "auto"  # 'auto' to derive from git commits; 'notes' to only include user notes
 
 
 @dataclass
@@ -48,6 +49,11 @@ class AppConfig:
     pre_release: PreReleaseConfig = field(default_factory=PreReleaseConfig)
     bump_rules: BumpRulesConfig = field(default_factory=BumpRulesConfig)
     changelog: ChangelogConfig = field(default_factory=ChangelogConfig)
+    # Safety options (e.g., allow dirty working tree)
+    class SafetyConfig:
+        allow_dirty: bool = False
+
+    safety: "AppConfig.SafetyConfig" = field(default_factory=SafetyConfig)
     files: List[str] = field(default_factory=list)
     # Resolved locations
     config_path: Optional[str] = None
