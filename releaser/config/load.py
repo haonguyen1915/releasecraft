@@ -50,9 +50,16 @@ def _merge_into_config(cfg: AppConfig, data: Dict[str, Any]) -> None:
         if "block" in bump_rules:
             cfg.bump_rules.block = list(bump_rules.get("block") or [])
 
-    files = data.get("files", []) or []
+    files = data.get("files")
+    if not files:
+        # Some configs may place files under sections; accept project/pre_release placements
+        pre = data.get("pre_release", {}) or {}
+        files = pre.get("files")
+    if not files:
+        proj = data.get("project", {}) or {}
+        files = proj.get("files")
     if files:
-        cfg.files = list(files)
+        cfg.files = list(files or [])
 
 
 def load_config(config_path: Optional[str] = None) -> AppConfig:
@@ -97,4 +104,3 @@ def load_config(config_path: Optional[str] = None) -> AppConfig:
     home = Path(os.path.expanduser("~"))
     _try(home / ".releaser/config.toml")
     return cfg
-

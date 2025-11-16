@@ -22,6 +22,10 @@ enabled = true
 default_channel = "rc"
 apply = ["release/*"]
 block = ["main"]
+
+files = [
+  "pkg/__init__.py:__version__",
+]
 """
     (tmp_path / ".releaser.toml").write_text(cfg_text.strip() + "\n")
     monkeypatch.chdir(tmp_path)
@@ -34,4 +38,4 @@ block = ["main"]
     assert cfg.pre_release.default_channel == "rc"
     assert cfg.pre_release.apply == ["release/*"]
     assert cfg.pre_release.block == ["main"]
-
+    assert cfg.files == ["pkg/__init__.py:__version__"]

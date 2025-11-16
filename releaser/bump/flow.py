@@ -13,6 +13,9 @@ from releaser.bump.semver import apply_prerelease, bump_base, finalize, parse
 from releaser.bump.rules import check_bump_allowed, check_prerelease_allowed
 from releaser.bump.notes import append_changelog, normalize_notes, read_notes_from_editor
 from releaser.drafter import utils as git_utils
+import configparser
+import re
+from pathlib import Path
 
 
 @dataclass
@@ -128,13 +131,36 @@ def run(args) -> int:
 
     target_version = None
 
+    interactive = False
     if not bump_type and not manual and not do_finalize:
         # Interactive selection
         bt, manual_v = _interactive_pick_bump2(current_version, tag_prefix)
+        interactive = True
         if bt == "manual":
             manual = manual_v
         else:
             bump_type = bt
+
+    # Interactive: choose release line if not specified by flags
+    if interactive and not do_pre and not do_finalize:
+        options = ["Stable release"]
+        # Finalize only if current version is pre-release
+        is_pre_now = parse(current_version).pre is not None
+        pre_allowed, pre_reason, _channel = check_prerelease_allowed(cfg)
+        if pre_allowed:
+            options.append("Pre-release")
+        else:
+            options.append(f"Pre-release (disabled: {pre_reason})")
+        if is_pre_now:
+            options.append("Finalize pre-release to stable")
+
+        choice = prompt_choice("Select release line", options, default=options[0])
+        if choice.startswith("Pre-release ") and not pre_allowed:
+            logger.warning("Pre-release not allowed by branch rules; using stable release")
+        elif choice.startswith("Pre-release"):
+            do_pre = True
+        elif choice.startswith("Finalize"):
+            do_finalize = True
 
     if do_finalize:
         target_version = finalize(current_version)
@@ -203,9 +229,15 @@ def run(args) -> int:
         else:
             logger.info(f"Would update changelog: {changelog_path}")
 
+    # Decide actions (interactive prompt if flags not explicitly steering)
     do_commit = not getattr(args, "no_commit", False)
     do_tag = not getattr(args, "no_tag", False)
     do_push = bool(getattr(args, "push", False))
+
+    if interactive and not dry_run and not getattr(args, "no_commit", False) and not getattr(args, "no_tag", False) and not getattr(args, "push", False):
+        do_commit = prompt_confirmation("Commit changes?", default=True)
+        do_tag = prompt_confirmation("Create annotated tag?", default=True)
+        do_push = prompt_confirmation("Push to remote?", default=False)
 
     if dry_run:
         logger.info("Dry-run: no file changes, no commit/tag/push performed")
@@ -214,6 +246,16 @@ def run(args) -> int:
     # Write version to file(s) after confirming not dry-run
     updated_file = provider.write_version(target_version, use_native=cfg.project.use_native)
     files_to_add.append(updated_file)
+
+    # Update additional files from config (e.g., pkg/__init__.py:__version__, setup.cfg:metadata.version)
+    logger.debug(f"Additional file targets: {cfg.files}")
+    for entry in cfg.files or []:
+        try:
+            path, selector = entry.split(":", 1)
+        except ValueError:
+            continue
+        _update_additional_file_version(path.strip(), selector.strip(), target_version, files_to_add)
+        logger.debug(f"Updated file target: {entry}")
 
     try:
         _git_commit_tag_push(files_to_add, tag_name, notes_text, do_commit, do_tag, do_push)
@@ -255,3 +297,33 @@ def _interactive_pick_bump2(current_v: str, tag_prefix: str) -> Tuple[str, Optio
     if key == "cancel":
         raise SystemExit(0)
     return key, None
+
+
+def _update_additional_file_version(path_str: str, selector: str, version: str, files_to_add: list[str]) -> None:
+    p = Path(path_str)
+    if not p.exists():
+        return
+    # Python __init__.py: __version__
+    if p.suffix == ".py" and selector == "__version__":
+        content = p.read_text()
+        if re.search(r"^__version__\s*=\s*['\"]([^'\"]+)['\"]", content, flags=re.M):
+            content = re.sub(r"^__version__\s*=\s*['\"]([^'\"]+)['\"]", f"__version__ = '{version}'", content, flags=re.M)
+        else:
+            if not content.endswith("\n"):
+                content += "\n"
+            content += f"__version__ = '{version}'\n"
+        p.write_text(content)
+        files_to_add.append(str(p))
+        return
+
+    # setup.cfg: metadata.version
+    if p.name == "setup.cfg" and selector == "metadata.version":
+        cp = configparser.ConfigParser()
+        cp.read(p)
+        if not cp.has_section("metadata"):
+            cp.add_section("metadata")
+        cp.set("metadata", "version", version)
+        with p.open("w") as f:
+            cp.write(f)
+        files_to_add.append(str(p))
+        return
