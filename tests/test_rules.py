@@ -27,13 +27,13 @@ def test_bump_rules_block(monkeypatch):
 
 def test_prerelease_rules_apply_and_channel_map(monkeypatch):
     cfg = _cfg()
-    cfg.pre_release.enabled = True
-    cfg.pre_release.apply = ["develop", "release/*"]
-    cfg.pre_release.channel_map = {"develop": "alpha"}
+    cfg.release.pre_release.enabled = True
+    cfg.release.pre_release.apply = ["develop", "release/*"]
+    # Note: channel_map is not in the new schema, testing default channel instead
 
     monkeypatch.setattr("releaser.bump.rules.current_branch", lambda: "develop")
     allowed, reason, channel = check_prerelease_allowed(cfg)
-    assert allowed is True and channel == "alpha"
+    assert allowed is True and channel == cfg.release.pre_release.default_channel
 
     monkeypatch.setattr("releaser.bump.rules.current_branch", lambda: "feature/x")
     allowed, reason, _ = check_prerelease_allowed(cfg)

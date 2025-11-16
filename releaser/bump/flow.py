@@ -121,8 +121,8 @@ def run(args) -> int:
         repo_present = _Path(".git").exists()
         if not getattr(args, "dry_run", False) and repo_present:
             if git_utils.has_uncommitted_changes():
-                if getattr(cfg, "safety", None) and getattr(cfg.safety, "allow_dirty", False):
-                    logger.warning("Uncommitted changes detected; continuing due to safety.allow_dirty=true")
+                if cfg.release.allow_dirty:
+                    logger.warning("Uncommitted changes detected; continuing due to release.allow_dirty=true")
                 else:
                     logger.warning(
                         "Uncommitted changes detected. Please commit or stash your changes before releasing."
@@ -164,7 +164,7 @@ def run(args) -> int:
             tag_prefix,
             pre_allowed,
             channel,
-            cfg.pre_release.auto_increment,
+            cfg.release.pre_release.auto_increment,
             is_pre_now,
         )
         interactive = True
@@ -196,7 +196,7 @@ def run(args) -> int:
                 base_for_pre,
                 previous_version=current_version,
                 channel=channel,
-                auto_increment=cfg.pre_release.auto_increment,
+                auto_increment=cfg.release.pre_release.auto_increment,
             )
         else:
             base_next = bump_base(current_base, bump_type or _recommend_bump_type())
@@ -208,7 +208,7 @@ def run(args) -> int:
     notes_text = _read_notes_from_flags(getattr(args, "notes", None), getattr(args, "notes_file", None))
 
     # AI-powered release notes generation
-    if not notes_text and cfg.ai.enabled and not getattr(args, "no_commit", False) and not getattr(args, "no_tag", False):
+    if not notes_text and cfg.release.auto_gen_notes.enabled and not getattr(args, "no_commit", False) and not getattr(args, "no_tag", False):
         logger.info("AI is enabled, generating release notes...")
         try:
             # Get the latest git tag for the previous version
@@ -230,8 +230,12 @@ def run(args) -> int:
                     logger.warning("Could not determine first commit, using HEAD")
                     previous_tag = "HEAD"
 
+            # Build AiConfig from app config (combines LLM and auto_gen_notes settings)
+            from releaser.ai.config import AiConfig
+            ai_config = AiConfig.from_app_config(cfg)
+
             ai_notes = generate_release_notes_with_fallback(
-                config=cfg.ai,
+                config=ai_config,
                 repo_path=Path.cwd(),
                 current_version=str(target_version),
                 previous_version=previous_tag,
@@ -246,7 +250,7 @@ def run(args) -> int:
                 )
 
                 # Allow review/editing unless auto-accept is enabled
-                if cfg.ai.accept_automatically:
+                if cfg.llm.accept_automatically:
                     logger.info("Auto-accepting AI-generated notes (accept_automatically=True)")
                     notes_text = ai_notes
                 else:
@@ -269,7 +273,7 @@ def run(args) -> int:
                     # else: Reject, will fall through to manual prompt
         except Exception as e:
             logger.error(f"AI generation failed: {e}")
-            if cfg.ai.fail_on_error:
+            if cfg.llm.fail_on_error:
                 raise
             logger.warning("Falling back to manual release notes entry")
 
@@ -282,17 +286,17 @@ def run(args) -> int:
     notes_text = normalize_notes(notes_text)
 
     # Auto apply changelog from config when enabled (preview even in dry-run)
-    if not getattr(args, "changelog", False) and cfg.changelog.enabled:
+    if not getattr(args, "changelog", False) and cfg.release.change_log.enabled:
         setattr(args, "changelog", True)
         if not getattr(args, "changelog_file", None):
-            setattr(args, "changelog_file", cfg.changelog.file or "CHANGELOG.md")
+            setattr(args, "changelog_file", cfg.release.change_log.file or "CHANGELOG.md")
 
     # Interactive: Ask to update changelog if not specified via flags nor config
     if (
         interactive
         and not getattr(args, "changelog", False)
         and not dry_run
-        and not cfg.changelog.enabled
+        and not cfg.release.change_log.enabled
     ):
         if prompt_confirmation("Update CHANGELOG.md with this release?", default=bool(notes_text)):
             setattr(args, "changelog", True)
@@ -358,8 +362,8 @@ def run(args) -> int:
     files_to_add.append(updated_file)
 
     # Update additional files from config (e.g., pkg/__init__.py:__version__, setup.cfg:metadata.version)
-    logger.debug(f"Additional file targets: {cfg.files}")
-    for entry in cfg.files or []:
+    logger.debug(f"Additional file targets: {cfg.release.version_targets}")
+    for entry in cfg.release.version_targets or []:
         try:
             path, selector = entry.split(":", 1)
         except ValueError:
@@ -492,7 +496,7 @@ def _build_changelog_content(
     body = ""
     # If auto mode and git repo present, derive content from commits
     repo_present = Path(".git").exists()
-    if cfg.changelog.mode.lower() == "auto" and repo_present:
+    if cfg.release.change_log.mode.lower() == "auto" and repo_present:
         try:
             previous_tag = git_utils.get_latest_tag()
             entries = git_utils.get_commits_since_tag(previous_tag)

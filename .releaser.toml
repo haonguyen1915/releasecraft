@@ -1,16 +1,30 @@
-version_targets = []
 
+
+# --- Core Project Settings ---
 [project]
+# Provider type: auto|poetry|setuptools|npm
 type = "poetry"
+# Tag prefix for git tags (e.g., v1.2.3)
 tag_prefix = "v"
+# Prefer running native tooling (poetry version / npm version) when available
 use_native = true
 
-[defaults]
-commit = true
-tag = true
-push = false
 
-[pre_release]
+# --- Release Configuration ---
+[release]
+create_commit = true
+create_tag = true
+push = false
+version_targets = []
+change_log_file = "CHANGELOG.md"
+allow_dirty = false
+
+[release.version]
+strategy = "auto"
+since = ""
+to = "HEAD"
+
+[release.pre_release]
 enabled = true
 default_channel = "rc"
 auto_increment = true
@@ -18,44 +32,73 @@ reset_on_bump = true
 apply = []
 block = []
 
-[changelog]
+[release.change_log]
+# Auto mode derives sections from commits; 'notes' includes only user notes
 enabled = true
 file = "CHANGELOG.md"
 mode = "auto"
 
-[safety]
-allow_dirty = false
+[release.auto_gen_notes]
+# AI-powered release notes generation
+enabled = false
+include_diff = false
+always_diff_types = []
+max_commits = 200
+mode = "auto"
 
-[ai]
-enabled = true
+
+# --- LLM Configuration ---
+[llm-config]
+# Advanced LLM configuration for release notes and commit message generation
+enabled = false
 provider = "openai"
 model = "gpt-4o-mini"
 api_key_env = "OPENAI_API_KEY"
 temperature = 0.2
 max_tokens = 800
-include_diff = true  # Enable to include code diffs
-max_commits = 200
+# Prompt overrides (optional)
+# prompt_release_notes_file = "path/to/custom_release_notes.md.j2"
+# system_prompt_file = "path/to/custom_system_prompt.md"
+# Caching and safety
 cache = true
 accept_automatically = false
 fail_on_error = false
-# Specify which commit types should always include diffs
-# Options: "feat", "fix", "perf", "breaking", "security", "docs", "refactor", etc.
-always_diff_types = ["feat", "breaking"]
 
-[version]
-strategy = "auto"
-since = ""
-to = "HEAD"
 
-[bump_rules]
-apply = []
-block = []
-
+# --- Hooks ---
 [hooks]
+# Shell commands to run before/after bump (optional)
 pre_bump = []
 post_bump = []
 
-[pre_release.channel_map]
 
+# --- Provider-Specific Configuration ---
 [provider.poetry]
+# Prefer `poetry version` when available
 prefer_command = true
+
+[provider.setuptools]
+# __init__ version file for setuptools projects
+version_file = "pkg/__init__.py"
+
+[provider.npm]
+# Prefer `npm version`; workspace is for monorepos
+prefer_command = true
+workspace = false
+
+
+# --- Commit Linting ---
+[commit_lint]
+# Conventional Commit enforcement for commit-msg hook
+enabled = true
+types = ["feat", "fix", "docs", "chore", "refactor", "perf", "test", "build", "ci", "revert", "style"]
+skip_merge_commits = true
+skip_revert_commits = true
+
+
+# --- Commit Generation ---
+[commit_gen]
+# Controls `releaser commit-gen` behavior
+history_commits = 10
+demote_feat_if_similar = true
+allow_scope = false

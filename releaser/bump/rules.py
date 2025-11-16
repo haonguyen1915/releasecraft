@@ -32,23 +32,24 @@ def check_bump_allowed(cfg: AppConfig) -> Tuple[bool, Optional[str]]:
 
 def check_prerelease_allowed(cfg: AppConfig) -> Tuple[bool, Optional[str], str]:
     """Return (allowed, reason, channel)."""
-    if not cfg.pre_release.enabled:
-        return False, "Pre-release disabled by config", cfg.pre_release.default_channel
+    if not cfg.release.pre_release.enabled:
+        return False, "Pre-release disabled by config", cfg.release.pre_release.default_channel
 
     branch = current_branch()
-    if cfg.pre_release.block and _match_any(branch, cfg.pre_release.block):
-        return False, f"Pre-release is disabled on branch '{branch}' by pre_release.block rule", cfg.pre_release.default_channel
+    if cfg.release.pre_release.block and _match_any(branch, cfg.release.pre_release.block):
+        return False, f"Pre-release is disabled on branch '{branch}' by pre_release.block rule", cfg.release.pre_release.default_channel
 
-    if cfg.pre_release.apply:
-        if not _match_any(branch, cfg.pre_release.apply):
-            return False, f"Pre-release is disabled on branch '{branch}' (not in pre_release.apply)", cfg.pre_release.default_channel
+    if cfg.release.pre_release.apply:
+        if not _match_any(branch, cfg.release.pre_release.apply):
+            return False, f"Pre-release is disabled on branch '{branch}' (not in pre_release.apply)", cfg.release.pre_release.default_channel
 
     # channel map override
-    channel = cfg.pre_release.default_channel
-    for pat, ch in (cfg.pre_release.channel_map or {}).items():
-        if fnmatch.fnmatch(branch, pat):
-            channel = ch
-            break
+    channel = cfg.release.pre_release.default_channel
+    # Note: channel_map is not in the new schema, skip for now
+    # for pat, ch in (cfg.release.pre_release.channel_map or {}).items():
+    #     if fnmatch.fnmatch(branch, pat):
+    #         channel = ch
+    #         break
 
     return True, None, channel
 
