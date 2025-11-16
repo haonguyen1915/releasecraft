@@ -28,8 +28,8 @@ enabled = true
 default_channel = "rc"
 auto_increment = true
 reset_on_bump = true
-apply = []
-block = []
+apply = ["develop", "release/*"]
+block = ["main", "master", "hotfix/*"]
 
 [release.change_log]
 # Auto mode derives sections from commits; 'notes' includes only user notes
@@ -40,8 +40,8 @@ mode = "auto"
 [release.auto_gen_notes]
 # AI-powered release notes generation
 enabled = false
-include_diff = false
-always_diff_types = []
+include_diff = true
+always_diff_types = ["feat"]
 max_commits = 200
 mode = "auto"
 
@@ -54,7 +54,7 @@ provider = "openai"
 model = "gpt-4o-mini"
 api_key_env = "OPENAI_API_KEY"
 temperature = 0.2
-max_tokens = 800
+max_tokens = 2500
 # Prompt overrides (optional)
 # prompt_release_notes_file = "path/to/custom_release_notes.md.j2"
 # system_prompt_file = "path/to/custom_system_prompt.md"

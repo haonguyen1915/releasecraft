@@ -162,7 +162,7 @@ def run(args) -> int:
             "model": "gpt-4o-mini",
             "api_key_env": "OPENAI_API_KEY",
             "temperature": 0.2,
-            "max_tokens": 800,
+            "max_tokens": 2500,
             "cache": True,
             "accept_automatically": False,
             "fail_on_error": False,
@@ -256,8 +256,8 @@ def _render_full_config(doc: Dict[str, object]) -> str:
     lines.append(f"default_channel = \"{pre_release.get('default_channel', 'rc') if isinstance(pre_release, dict) else 'rc'}\"\n")
     lines.append(f"auto_increment = {b(bool(pre_release.get('auto_increment', True)) if isinstance(pre_release, dict) else True)}\n")
     lines.append(f"reset_on_bump = {b(bool(pre_release.get('reset_on_bump', True)) if isinstance(pre_release, dict) else True)}\n")
-    pre_apply = list(pre_release.get('apply', []) or []) if isinstance(pre_release, dict) else []
-    pre_block = list(pre_release.get('block', []) or []) if isinstance(pre_release, dict) else []
+    pre_apply = list(pre_release.get('apply', ["develop", "release/*"]) or ["develop", "release/*"]) if isinstance(pre_release, dict) else ["develop", "release/*"]
+    pre_block = list(pre_release.get('block', ["main", "master", "hotfix/*"]) or ["main", "master", "hotfix/*"]) if isinstance(pre_release, dict) else ["main", "master", "hotfix/*"]
     lines.append(f"apply = {list_str(pre_apply)}\n")
     lines.append(f"block = {list_str(pre_block)}\n")
 
@@ -270,8 +270,8 @@ def _render_full_config(doc: Dict[str, object]) -> str:
     lines.append("\n[release.auto_gen_notes]\n")
     lines.append("# AI-powered release notes generation\n")
     lines.append(f"enabled = {b(bool(auto_gen_notes.get('enabled', False)) if isinstance(auto_gen_notes, dict) else False)}\n")
-    lines.append(f"include_diff = {b(bool(auto_gen_notes.get('include_diff', False)) if isinstance(auto_gen_notes, dict) else False)}\n")
-    always_diff = list(auto_gen_notes.get('always_diff_types', []) or []) if isinstance(auto_gen_notes, dict) else []
+    lines.append(f"include_diff = {b(bool(auto_gen_notes.get('include_diff', True)) if isinstance(auto_gen_notes, dict) else True)}\n")
+    always_diff = list(auto_gen_notes.get('always_diff_types', ["feat"]) or ["feat"]) if isinstance(auto_gen_notes, dict) else ["feat"]
     lines.append(f"always_diff_types = {list_str(always_diff)}\n")
     lines.append(f"max_commits = {int(auto_gen_notes.get('max_commits', 200)) if isinstance(auto_gen_notes, dict) else 200}\n")
     lines.append(f"mode = \"{auto_gen_notes.get('mode', 'auto') if isinstance(auto_gen_notes, dict) else 'auto'}\"\n")
@@ -284,7 +284,7 @@ def _render_full_config(doc: Dict[str, object]) -> str:
     lines.append(f"model = \"{llm.get('model', 'gpt-4o-mini')}\"\n")
     lines.append(f"api_key_env = \"{llm.get('api_key_env', 'OPENAI_API_KEY')}\"\n")
     lines.append(f"temperature = {float(llm.get('temperature', 0.2))}\n")
-    lines.append(f"max_tokens = {int(llm.get('max_tokens', 800))}\n")
+    lines.append(f"max_tokens = {int(llm.get('max_tokens', 2500))}\n")
     lines.append("# Prompt overrides (optional)\n")
     lines.append("# prompt_release_notes_file = \"path/to/custom_release_notes.md.j2\"\n")
     lines.append("# system_prompt_file = \"path/to/custom_system_prompt.md\"\n")

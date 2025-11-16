@@ -27,8 +27,8 @@ class PreReleaseConfig:
     default_channel: str = "rc"
     auto_increment: bool = True
     reset_on_bump: bool = True
-    apply: List[str] = field(default_factory=list)
-    block: List[str] = field(default_factory=list)
+    apply: List[str] = field(default_factory=lambda: ["develop", "release/*"])
+    block: List[str] = field(default_factory=lambda: ["main", "master", "hotfix/*"])
 
 
 @dataclass
@@ -43,8 +43,8 @@ class ChangeLogConfig:
 class AutoGenNotesConfig:
     """Auto-generated release notes configuration."""
     enabled: bool = False
-    include_diff: bool = False
-    always_diff_types: List[str] = field(default_factory=list)
+    include_diff: bool = True
+    always_diff_types: List[str] = field(default_factory=lambda: ["feat"])
     max_commits: int = 200
     mode: str = "auto"
 
@@ -72,7 +72,7 @@ class LlmConfig:
     model: str = "gpt-4o-mini"
     api_key_env: str = "OPENAI_API_KEY"
     temperature: float = 0.2
-    max_tokens: int = 800
+    max_tokens: int = 2500
     cache: bool = True
     accept_automatically: bool = False
     fail_on_error: bool = False
