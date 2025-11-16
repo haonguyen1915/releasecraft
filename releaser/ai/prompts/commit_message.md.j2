@@ -1,0 +1,27 @@
+Context
+- Files changed ({{ files|length }}):
+{% for f in files %}- {{ f }}
+{% endfor %}
+
+- Diffs (excerpts):
+{% for path, diff in diffs.items() %}
+--- {{ path }} ---
+{{ diff[:3000] }}
+
+{% endfor %}
+
+Task
+- Write a Conventional Commit message based on the changes.
+- Choose the best type (feat, fix, docs, chore, refactor, perf, test, build, ci, revert, style).
+- Use a short subject in imperative mood; include a scope if appropriate.
+- Add a brief body if helpful; include a BREAKING CHANGE footer if warranted.
+{% if ticket %}- Add a `Refs: {{ ticket }}` footer if relevant.
+{% endif %}
+
+Return a structured response with:
+- type
+- scope (optional)
+- subject
+- body (optional)
+- breaking_change (boolean)
+- footers (mapping of footer key -> value)

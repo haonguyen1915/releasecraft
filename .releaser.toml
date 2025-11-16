@@ -33,11 +33,14 @@ model = "gpt-4o-mini"
 api_key_env = "OPENAI_API_KEY"
 temperature = 0.2
 max_tokens = 800
-include_diff = false
+include_diff = true  # Enable to include code diffs
 max_commits = 200
 cache = true
 accept_automatically = false
 fail_on_error = false
+# Specify which commit types should always include diffs
+# Options: "feat", "fix", "perf", "breaking", "security", "docs", "refactor", etc.
+always_diff_types = ["feat", "breaking"]
 
 [version]
 strategy = "auto"
