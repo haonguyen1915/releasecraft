@@ -54,6 +54,24 @@ class AppConfig:
         allow_dirty: bool = False
 
     safety: "AppConfig.SafetyConfig" = field(default_factory=SafetyConfig)
+    # AI settings (OpenAI + Instructor)
+    @dataclass
+    class AiSettings:
+        enabled: bool = False
+        provider: str = "openai"
+        model: str = "gpt-4o-mini"
+        api_key_env: str = "OPENAI_API_KEY"
+        temperature: float = 0.2
+        max_tokens: int = 800
+        prompt_release_notes_file: Optional[str] = None
+        system_prompt_file: Optional[str] = None
+        include_diff: bool = False
+        max_commits: int = 200
+        cache: bool = True
+        accept_automatically: bool = False
+        fail_on_error: bool = False
+
+    ai: "AppConfig.AiSettings" = field(default_factory=AiSettings)
     files: List[str] = field(default_factory=list)
     # Resolved locations
     config_path: Optional[str] = None

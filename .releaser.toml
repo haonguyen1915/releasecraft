@@ -24,7 +24,20 @@ file = "CHANGELOG.md"
 mode = "auto"
 
 [safety]
-allow_dirty = true
+allow_dirty = false
+
+[ai]
+enabled = false
+provider = "openai"
+model = "gpt-4o-mini"
+api_key_env = "OPENAI_API_KEY"
+temperature = 0.2
+max_tokens = 800
+include_diff = false
+max_commits = 200
+cache = true
+accept_automatically = false
+fail_on_error = false
 
 [version]
 strategy = "auto"

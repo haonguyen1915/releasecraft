@@ -120,6 +120,22 @@ def run(args) -> int:
         "safety": {
             "allow_dirty": False,
         },
+        "ai": {
+            "enabled": False,
+            "provider": "openai",
+            "model": "gpt-4o-mini",
+            "api_key_env": "OPENAI_API_KEY",
+            "temperature": 0.2,
+            "max_tokens": 800,
+            "include_diff": False,
+            "max_commits": 200,
+            "cache": True,
+            "accept_automatically": False,
+            "fail_on_error": False,
+            # Prompt paths are optional; include as commented documentation
+            # "prompt_release_notes_file": ".releaser/prompts/release_notes.md.j2",
+            # "system_prompt_file": ".releaser/prompts/system.md.j2",
+        },
     }
 
     if files_flag:

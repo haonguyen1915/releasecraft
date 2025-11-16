@@ -78,6 +78,45 @@ def _merge_into_config(cfg: AppConfig, data: Dict[str, Any]) -> None:
     if files:
         cfg.files = list(files or [])
 
+    # AI block (optional)
+    ai = data.get("ai", {}) or {}
+    if ai:
+        if "enabled" in ai:
+            cfg.ai.enabled = bool(ai.get("enabled"))
+        if "provider" in ai:
+            cfg.ai.provider = str(ai.get("provider")) or "openai"
+        if "model" in ai:
+            cfg.ai.model = str(ai.get("model")) or "gpt-4o-mini"
+        if "api_key_env" in ai:
+            cfg.ai.api_key_env = str(ai.get("api_key_env")) or "OPENAI_API_KEY"
+        if "temperature" in ai:
+            try:
+                cfg.ai.temperature = float(ai.get("temperature"))
+            except Exception:
+                pass
+        if "max_tokens" in ai:
+            try:
+                cfg.ai.max_tokens = int(ai.get("max_tokens"))
+            except Exception:
+                pass
+        if "prompt_release_notes_file" in ai:
+            cfg.ai.prompt_release_notes_file = ai.get("prompt_release_notes_file")
+        if "system_prompt_file" in ai:
+            cfg.ai.system_prompt_file = ai.get("system_prompt_file")
+        if "include_diff" in ai:
+            cfg.ai.include_diff = bool(ai.get("include_diff"))
+        if "max_commits" in ai:
+            try:
+                cfg.ai.max_commits = int(ai.get("max_commits"))
+            except Exception:
+                pass
+        if "cache" in ai:
+            cfg.ai.cache = bool(ai.get("cache"))
+        if "accept_automatically" in ai:
+            cfg.ai.accept_automatically = bool(ai.get("accept_automatically"))
+        if "fail_on_error" in ai:
+            cfg.ai.fail_on_error = bool(ai.get("fail_on_error"))
+
 
 def load_config(config_path: Optional[str] = None) -> AppConfig:
     """Load configuration with precedence: explicit path > repo > home > defaults.
