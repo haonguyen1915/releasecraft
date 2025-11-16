@@ -39,3 +39,29 @@ class ReleaseNotes(BaseModel):
             parts.append("")
 
         return "\n".join(parts).strip()
+
+
+class CommitMessage(BaseModel):
+    type: str
+    scope: str | None = None
+    subject: str
+    body: str | None = None
+    breaking_change: bool = False
+    footers: dict[str, str] | None = None
+
+    def to_text(self) -> str:
+        scope_part = f"({self.scope})" if self.scope else ""
+        bang = "!" if self.breaking_change else ""
+        header = f"{self.type}{scope_part}{bang}: {self.subject}"
+        lines: list[str] = [header]
+        if self.body:
+            lines.append("")
+            lines.append(self.body.strip())
+        if self.breaking_change:
+            lines.append("")
+            lines.append("BREAKING CHANGE: See details above.")
+        if self.footers:
+            lines.append("")
+            for k, v in self.footers.items():
+                lines.append(f"{k}: {v}")
+        return "\n".join(lines).strip()

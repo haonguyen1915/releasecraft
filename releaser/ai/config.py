@@ -18,6 +18,7 @@ class AiConfig:
     cache: bool = True
     accept_automatically: bool = False
     fail_on_error: bool = False
+    always_diff_types: list[str] | None = None  # Commit types that always include diffs
 
     @staticmethod
     def from_app_config(cfg) -> "AiConfig":
@@ -38,5 +39,6 @@ class AiConfig:
             cache=getattr(ai, "cache", True),
             accept_automatically=getattr(ai, "accept_automatically", False),
             fail_on_error=getattr(ai, "fail_on_error", False),
+            always_diff_types=getattr(ai, "always_diff_types", None),
         )
 

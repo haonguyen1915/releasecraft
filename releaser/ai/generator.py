@@ -75,6 +75,7 @@ def generate_release_notes_for_version(
             to_ref="HEAD",
             include_diffs=config.include_diff,
             max_commits=config.max_commits,
+            always_diff_types=config.always_diff_types,
         )
     except Exception as e:
         raise ValueError(f"Failed to collect git data: {e}") from e

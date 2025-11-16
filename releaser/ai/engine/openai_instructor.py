@@ -17,7 +17,7 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
-from releaser.ai.schemas import ReleaseNotes
+from releaser.ai.schemas import ReleaseNotes, CommitMessage
 
 
 def _import_clients() -> tuple[Any, Any]:
@@ -179,6 +179,143 @@ def _render_template(template_str: str, **context: Any) -> str:
     jinja2 = _import_jinja2()
     template = jinja2.Template(template_str)
     return template.render(**context)
+
+
+def _infer_cc_from_heuristics(
+    *, files: list[str], diffs: dict[str, str] | None = None
+) -> CommitMessage:
+    """Heuristic commit message generator when AI is unavailable.
+
+    - Determines type by file patterns and diff content
+    - Infers scope from primary top-level directory
+    - Produces a short subject
+    """
+    diffs = diffs or {}
+    lowered = [f.lower() for f in files]
+    # Type heuristics
+    def only(exts=None, prefixes=None):
+        exts = exts or []
+        prefixes = prefixes or []
+        return all(
+            (any(f.endswith(e) for e in exts) if exts else True)
+            and (any(f.startswith(p) for p in prefixes) if prefixes else True)
+            for f in lowered
+        )
+
+    if files and only(exts=[".md", ".rst"]) or all(f.startswith("docs/") for f in lowered):
+        ctype = "docs"
+        subject = "update documentation"
+    elif files and all(f.startswith("tests/") for f in lowered):
+        ctype = "test"
+        subject = "update tests"
+    elif any(
+        p in files
+        for p in [
+            "pyproject.toml",
+            "setup.cfg",
+            "package.json",
+            ".pre-commit-config.yaml",
+        ]
+    ):
+        ctype = "build"
+        subject = "update build configuration"
+    elif any(f.startswith(".github/") or f.startswith(".gitlab") for f in lowered):
+        ctype = "ci"
+        subject = "update CI configuration"
+    else:
+        # Analyze diff content for common signals
+        added = "\n".join([d for d in diffs.values()])
+        added_lower = added.lower()
+        if "fix" in added_lower or "bug" in added_lower or "error" in added_lower:
+            ctype = "fix"
+            subject = "fix issues"
+        elif "+def " in added or "+class " in added:
+            ctype = "feat"
+            subject = "add functionality"
+        elif "refactor" in added_lower:
+            ctype = "refactor"
+            subject = "refactor code"
+        else:
+            ctype = "chore"
+            subject = "update files"
+
+    # Scope: choose first non-root top-level dir
+    scope = None
+    for f in files:
+        parts = f.split("/")
+        if len(parts) > 1 and parts[0] not in {"tests", "docs"}:
+            scope = parts[0]
+            break
+
+    return CommitMessage(type=ctype, scope=scope, subject=subject)
+
+
+def generate_commit_message(
+    *,
+    api_key: str | None,
+    model: str,
+    temperature: float,
+    max_tokens: int,
+    files: list[str],
+    diffs: dict[str, str],
+    ticket: str | None = None,
+    system_prompt_file: str | None = None,
+    user_prompt_file: str | None = None,
+) -> CommitMessage:
+    """Generate a Conventional Commit message from diffs and file list.
+
+    When AI dependencies or API key are unavailable, falls back to heuristics.
+    """
+    # AI unavailable: heuristics
+    if not api_key:
+        cm = _infer_cc_from_heuristics(files=files, diffs=diffs)
+        if ticket:
+            cm.footers = {"Refs": ticket}
+        return cm
+
+    # Load templates
+    system_template = _load_template(
+        custom_path=system_prompt_file,
+        default_filename="system_commit_message.md",
+    )
+    user_template = _load_template(
+        custom_path=user_prompt_file,
+        default_filename="commit_message.md.j2",
+    )
+
+    # Render user prompt
+    try:
+        user_prompt = _render_template(
+            user_template, files=files, diffs=diffs, ticket=ticket or ""
+        )
+    except ImportError:
+        # Fallback without Jinja2
+        diff_preview = "\n\n".join(
+            f"--- {p} ---\n{d[:2000]}" for p, d in list(diffs.items())[:5]
+        )
+        files_preview = "\n".join(f"- {f}" for f in files)
+        user_prompt = (
+            f"Files changed:\n{files_preview}\n\nDiff excerpts:\n{diff_preview}\n\n"
+            "Write a Conventional Commit message with type, optional scope, subject and body."
+        )
+
+    # AI path
+    try:
+        return generate_structured(
+            api_key=api_key,
+            model=model,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            system_prompt=system_template,
+            user_prompt=user_prompt,
+            response_model=CommitMessage,
+        )
+    except ImportError:
+        # As a last resort
+        cm = _infer_cc_from_heuristics(files=files, diffs=diffs)
+        if ticket:
+            cm.footers = {"Refs": ticket}
+        return cm
 
 
 def generate_release_notes(

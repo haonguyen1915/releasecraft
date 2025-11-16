@@ -26,6 +26,7 @@ def collect_commits_and_diffs(
     include_diffs: bool = True,
     max_commits: int = 200,
     max_diff_size: int = 5000,
+    always_diff_types: list[str] | None = None,
 ) -> dict[str, Any]:
     """Collect commits and smartly selected diffs from a git repository.
 
@@ -40,6 +41,8 @@ def collect_commits_and_diffs(
         include_diffs: Whether to include code diffs for important commits
         max_commits: Maximum number of commits to include
         max_diff_size: Maximum characters per diff to avoid token limits
+        always_diff_types: List of commit types that always include diffs
+                          Examples: ["feat", "fix", "breaking", "security", "perf"]
 
     Returns:
         Dictionary with structure:
@@ -65,7 +68,8 @@ def collect_commits_and_diffs(
         ...     from_ref="v1.0.0",
         ...     to_ref="HEAD",
         ...     include_diffs=True,
-        ...     max_commits=100
+        ...     max_commits=100,
+        ...     always_diff_types=["feat", "breaking"]
         ... )
         >>> print(f"Found {len(data['commits'])} commits")
         >>> print(f"Including diffs for {len(data['diffs'])} important commits")
@@ -83,7 +87,7 @@ def collect_commits_and_diffs(
     # Smart diff selection
     diffs = {}
     if include_diffs and commits:
-        important_commits = identify_important_commits(commits)
+        important_commits = identify_important_commits(commits, always_diff_types=always_diff_types)
 
         for commit in important_commits:
             try:
@@ -214,20 +218,26 @@ def get_commit_diff(
     return diff
 
 
-def identify_important_commits(commits: list[dict[str, str]]) -> list[dict[str, str]]:
+def identify_important_commits(
+    commits: list[dict[str, str]],
+    always_diff_types: list[str] | None = None,
+) -> list[dict[str, str]]:
     """Identify commits that need diff context for better understanding.
 
     Uses heuristics to determine which commits would benefit from
     having their code diffs included in the AI prompt.
 
     Selection criteria (in priority order):
+    0. Configured types (if always_diff_types is set)
     1. Breaking changes (! suffix or BREAKING CHANGE in message)
-    2. Commits without conventional commit prefixes (unclear intent)
-    3. Security-related commits
+    2. Security-related commits
+    3. Commits without conventional commit prefixes (unclear intent)
     4. Major features with vague descriptions
 
     Args:
         commits: List of commit dictionaries
+        always_diff_types: List of commit types that always include diffs
+                          Examples: ["feat", "fix", "breaking", "security", "perf"]
 
     Returns:
         Filtered list of important commits that should include diffs
@@ -238,8 +248,8 @@ def identify_important_commits(commits: list[dict[str, str]]) -> list[dict[str, 
         ...     {"hash": "def", "message": "feat: add feature"},
         ...     {"hash": "ghi", "message": "update stuff"},  # Unclear
         ... ]
-        >>> important = identify_important_commits(commits)
-        >>> len(important)  # Should include abc and ghi
+        >>> important = identify_important_commits(commits, always_diff_types=["feat", "breaking"])
+        >>> len(important)  # Should include abc and def
         2
     """
     important = []
@@ -253,9 +263,45 @@ def identify_important_commits(commits: list[dict[str, str]]) -> list[dict[str, 
     # Keywords that indicate importance
     security_keywords = ["security", "vulnerability", "cve", "exploit", "xss", "injection"]
 
+    # Normalize always_diff_types
+    if always_diff_types is None:
+        always_diff_types = []
+    always_diff_types_lower = [t.lower() for t in always_diff_types]
+
     for commit in commits:
         msg = commit["message"]
         msg_lower = msg.lower()
+
+        # Priority 0: User-configured types (highest priority)
+        if always_diff_types_lower:
+            # Check for "breaking" special type
+            if "breaking" in always_diff_types_lower:
+                if "!" in msg.split(":")[0] or "BREAKING CHANGE" in msg:
+                    important.append(commit)
+                    continue
+
+            # Check for "security" special type
+            if "security" in always_diff_types_lower:
+                if any(keyword in msg_lower for keyword in security_keywords):
+                    important.append(commit)
+                    continue
+
+            # Check for conventional commit types (feat, fix, perf, etc.)
+            for diff_type in always_diff_types_lower:
+                if diff_type in ["breaking", "security"]:
+                    continue  # Already handled above
+
+                # Check if commit starts with this type
+                if msg.startswith(f"{diff_type}:") or msg.startswith(f"{diff_type}("):
+                    important.append(commit)
+                    break  # Found a match, move to next commit
+            else:
+                # No match found in always_diff_types, continue to heuristics
+                pass
+
+            # If we added this commit, skip heuristics
+            if commit in important:
+                continue
 
         # Priority 1: Breaking changes (always include)
         if "!" in msg.split(":")[0] or "BREAKING CHANGE" in msg:

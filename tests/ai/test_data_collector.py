@@ -467,3 +467,153 @@ def test_collect_commits_and_diffs_handles_diff_errors(tmp_path, monkeypatch):
 
     assert len(data["commits"]) == 1
     assert len(data["diffs"]) == 0  # Diff failed but didn't crash
+
+def test_identify_important_commits_with_always_diff_types_feat():
+    """Test always_diff_types configuration for feat commits."""
+    commits = [
+        {"hash": "abc", "message": "feat: add new feature", "author": "Dev", "date": "2024-01-01"},
+        {"hash": "def", "message": "fix: resolve bug in parser", "author": "Dev", "date": "2024-01-02"},
+        {"hash": "ghi", "message": "docs: add API documentation", "author": "Dev", "date": "2024-01-03"},
+    ]
+
+    # Without config, only unclear commits selected by heuristics
+    important_default = identify_important_commits(commits)
+    assert len(important_default) == 0  # All are clear conventional commits
+
+    # With always_diff_types=["feat"], should include feat commits
+    important_feat = identify_important_commits(commits, always_diff_types=["feat"])
+    assert len(important_feat) == 1
+    assert important_feat[0]["hash"] == "abc"
+
+
+def test_identify_important_commits_with_always_diff_types_multiple():
+    """Test always_diff_types with multiple types."""
+    commits = [
+        {"hash": "abc", "message": "feat: add user authentication", "author": "Dev", "date": "2024-01-01"},
+        {"hash": "def", "message": "fix: resolve memory leak in cache", "author": "Dev", "date": "2024-01-02"},
+        {"hash": "ghi", "message": "perf: optimize database queries", "author": "Dev", "date": "2024-01-03"},
+        {"hash": "jkl", "message": "docs: add installation guide", "author": "Dev", "date": "2024-01-04"},
+    ]
+
+    important = identify_important_commits(commits, always_diff_types=["feat", "fix", "perf"])
+    
+    assert len(important) == 3
+    hashes = [c["hash"] for c in important]
+    assert "abc" in hashes  # feat
+    assert "def" in hashes  # fix
+    assert "ghi" in hashes  # perf
+    assert "jkl" not in hashes  # docs not in always_diff_types
+
+
+def test_identify_important_commits_with_always_diff_types_breaking():
+    """Test always_diff_types with special 'breaking' type."""
+    commits = [
+        {"hash": "abc", "message": "feat!: breaking change", "author": "Dev", "date": "2024-01-01"},
+        {"hash": "def", "message": "fix: BREAKING CHANGE: major update", "author": "Dev", "date": "2024-01-02"},
+        {"hash": "ghi", "message": "feat: normal feature", "author": "Dev", "date": "2024-01-03"},
+    ]
+
+    important = identify_important_commits(commits, always_diff_types=["breaking"])
+    
+    assert len(important) == 2
+    hashes = [c["hash"] for c in important]
+    assert "abc" in hashes  # feat!
+    assert "def" in hashes  # BREAKING CHANGE
+    assert "ghi" not in hashes  # Normal feat
+
+
+def test_identify_important_commits_with_always_diff_types_security():
+    """Test always_diff_types with special 'security' type."""
+    commits = [
+        {"hash": "abc", "message": "fix: resolve security vulnerability", "author": "Dev", "date": "2024-01-01"},
+        {"hash": "def", "message": "feat: add feature with CVE fix", "author": "Dev", "date": "2024-01-02"},
+        {"hash": "ghi", "message": "fix: normal bug fix", "author": "Dev", "date": "2024-01-03"},
+    ]
+
+    important = identify_important_commits(commits, always_diff_types=["security"])
+    
+    assert len(important) == 2
+    hashes = [c["hash"] for c in important]
+    assert "abc" in hashes  # security keyword
+    assert "def" in hashes  # CVE keyword
+    assert "ghi" not in hashes  # Normal fix
+
+
+def test_identify_important_commits_with_scoped_commits():
+    """Test always_diff_types with scoped commits like feat(api):."""
+    commits = [
+        {"hash": "abc", "message": "feat(api): add endpoint", "author": "Dev", "date": "2024-01-01"},
+        {"hash": "def", "message": "fix(auth): resolve login issue", "author": "Dev", "date": "2024-01-02"},
+        {"hash": "ghi", "message": "docs(readme): add usage examples", "author": "Dev", "date": "2024-01-03"},
+    ]
+
+    important = identify_important_commits(commits, always_diff_types=["feat", "fix"])
+    
+    assert len(important) == 2
+    hashes = [c["hash"] for c in important]
+    assert "abc" in hashes  # feat(api)
+    assert "def" in hashes  # fix(auth)
+    assert "ghi" not in hashes  # docs not configured
+
+
+def test_identify_important_commits_case_insensitive():
+    """Test that always_diff_types is case-insensitive."""
+    commits = [
+        {"hash": "abc", "message": "feat: add feature", "author": "Dev", "date": "2024-01-01"},
+        {"hash": "def", "message": "FIX: resolve bug", "author": "Dev", "date": "2024-01-02"},
+    ]
+
+    # Test with uppercase config
+    important = identify_important_commits(commits, always_diff_types=["FEAT", "FIX"])
+    
+    assert len(important) == 2  # Should match both despite case mismatch
+
+
+def test_identify_important_commits_heuristics_still_apply():
+    """Test that heuristics still apply even with always_diff_types set."""
+    commits = [
+        {"hash": "abc", "message": "feat: add feature", "author": "Dev", "date": "2024-01-01"},
+        {"hash": "def", "message": "fix!: breaking fix", "author": "Dev", "date": "2024-01-02"},
+        {"hash": "ghi", "message": "update things", "author": "Dev", "date": "2024-01-03"},  # Unclear
+    ]
+
+    # Configure only "feat", but heuristics should still catch breaking changes and unclear commits
+    important = identify_important_commits(commits, always_diff_types=["feat"])
+    
+    assert len(important) == 3
+    hashes = [c["hash"] for c in important]
+    assert "abc" in hashes  # feat (configured)
+    assert "def" in hashes  # breaking (heuristic)
+    assert "ghi" in hashes  # unclear (heuristic)
+
+
+def test_collect_commits_and_diffs_with_always_diff_types(tmp_path, monkeypatch):
+    """Test that collect_commits_and_diffs passes always_diff_types correctly."""
+    sample_commits = [
+        {"hash": "abc123", "message": "feat: add feature", "author": "Dev", "date": "2024-01-01"},
+        {"hash": "def456", "message": "fix: resolve bug", "author": "Dev", "date": "2024-01-02"},
+    ]
+
+    def mock_get_commit_log(*args, **kwargs):
+        return sample_commits
+
+    def mock_get_commit_diff(*args, **kwargs):
+        return "sample diff content"
+
+    monkeypatch.setattr("releaser.ai.data_collector.get_commit_log", mock_get_commit_log)
+    monkeypatch.setattr("releaser.ai.data_collector.get_commit_diff", mock_get_commit_diff)
+
+    # Call with always_diff_types
+    data = collect_commits_and_diffs(
+        repo_path=tmp_path,
+        from_ref="v1.0.0",
+        to_ref="HEAD",
+        include_diffs=True,
+        always_diff_types=["feat"],
+    )
+
+    # Should only include diff for feat commit
+    assert len(data["commits"]) == 2
+    assert len(data["diffs"]) == 1
+    assert "abc123" in data["diffs"]  # feat commit
+    assert "def456" not in data["diffs"]  # fix not configured
