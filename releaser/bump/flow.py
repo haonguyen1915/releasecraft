@@ -5,7 +5,7 @@ import subprocess
 from dataclasses import dataclass
 from typing import Optional, Tuple
 
-from releaser.console import console, logger, prompt_choice, prompt_confirmation, prompt_input
+from releaser.console import console, logger, bordered, prompt_choice, prompt_confirmation, prompt_input
 from releaser.config.load import load_config
 from releaser.config.model import AppConfig
 from releaser.bump import providers
@@ -251,16 +251,28 @@ def run(args) -> int:
 
     if getattr(args, "changelog", False):
         changelog_path = getattr(args, "changelog_file", None) or "CHANGELOG.md"
+        # Prepare changelog content for preview or write
+        changelog_date = datetime.date.today().isoformat()
+        changelog_content = f"## {tag_name} – {changelog_date}\n\n"
+        if notes_text:
+            changelog_content += notes_text.strip() + "\n\n"
+
         if not dry_run:
             append_changelog(
                 changelog_path,
                 tag_name,
-                datetime.date.today().isoformat(),
+                changelog_date,
                 notes_text,
             )
             files_to_add.append(changelog_path)
         else:
             logger.info(f"Would update changelog: {changelog_path}")
+            # Show a bordered preview of the content that would be added
+            bordered.create_bordered_content(
+                changelog_content,
+                title="CHANGELOG PREVIEW",
+                dry_run=True,
+            )
 
     # Decide actions (interactive prompt if flags not explicitly steering)
     do_commit = not getattr(args, "no_commit", False)
