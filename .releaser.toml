@@ -1,0 +1,15 @@
+[project]
+type = "poetry"
+tag_prefix = "v"
+use_native = true
+
+[defaults]
+commit = true
+tag = true
+push = true
+
+[pre_release]
+enabled = true
+default_channel = "rc"
+auto_increment = true
+reset_on_bump = true
