@@ -36,12 +36,18 @@ class BumpRulesConfig:
 
 
 @dataclass
+class ChangelogConfig:
+    enabled: bool = False
+    file: str = "CHANGELOG.md"
+
+
+@dataclass
 class AppConfig:
     project: ProjectConfig = field(default_factory=ProjectConfig)
     defaults: DefaultsConfig = field(default_factory=DefaultsConfig)
     pre_release: PreReleaseConfig = field(default_factory=PreReleaseConfig)
     bump_rules: BumpRulesConfig = field(default_factory=BumpRulesConfig)
+    changelog: ChangelogConfig = field(default_factory=ChangelogConfig)
     files: List[str] = field(default_factory=list)
     # Resolved locations
     config_path: Optional[str] = None
-

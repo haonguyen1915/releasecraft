@@ -112,6 +112,10 @@ def run(args) -> int:
             "auto_increment": True,
             "reset_on_bump": True,
         },
+        "changelog": {
+            "enabled": True,
+            "file": "CHANGELOG.md",
+        },
     }
 
     if files_flag:

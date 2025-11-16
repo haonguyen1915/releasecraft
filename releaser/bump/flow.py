@@ -221,6 +221,25 @@ def run(args) -> int:
 
     notes_text = normalize_notes(notes_text)
 
+    # Auto apply changelog from config when enabled (if no explicit flags)
+    if not getattr(args, "changelog", False) and not dry_run and cfg.changelog.enabled:
+        setattr(args, "changelog", True)
+        if not getattr(args, "changelog_file", None):
+            setattr(args, "changelog_file", cfg.changelog.file or "CHANGELOG.md")
+
+    # Interactive: Ask to update changelog if not specified via flags nor config
+    if (
+        interactive
+        and not getattr(args, "changelog", False)
+        and not dry_run
+        and not cfg.changelog.enabled
+    ):
+        if prompt_confirmation("Update CHANGELOG.md with this release?", default=bool(notes_text)):
+            setattr(args, "changelog", True)
+            default_path = getattr(args, "changelog_file", None) or "CHANGELOG.md"
+            path = prompt_input("Changelog path", default=default_path)
+            setattr(args, "changelog_file", path)
+
     # Show plan
     logger.info(f"Target version: {tag_prefix}{target_version}")
     if notes_text:

@@ -18,6 +18,10 @@ reset_on_bump = true
 apply = []
 block = []
 
+[changelog]
+enabled = true
+file = "CHANGELOG.md"
+
 [version]
 strategy = "auto"
 since = ""

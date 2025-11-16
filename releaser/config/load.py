@@ -6,7 +6,7 @@ from typing import Any, Dict, Optional
 
 import toml
 
-from .model import AppConfig, BumpRulesConfig, DefaultsConfig, PreReleaseConfig, ProjectConfig
+from .model import AppConfig, BumpRulesConfig, DefaultsConfig, PreReleaseConfig, ProjectConfig, ChangelogConfig
 
 
 def _merge_into_config(cfg: AppConfig, data: Dict[str, Any]) -> None:
@@ -49,6 +49,13 @@ def _merge_into_config(cfg: AppConfig, data: Dict[str, Any]) -> None:
             cfg.bump_rules.apply = list(bump_rules.get("apply") or [])
         if "block" in bump_rules:
             cfg.bump_rules.block = list(bump_rules.get("block") or [])
+
+    changelog = data.get("changelog", {}) or {}
+    if changelog:
+        if "enabled" in changelog:
+            cfg.changelog.enabled = bool(changelog.get("enabled"))
+        if "file" in changelog:
+            cfg.changelog.file = str(changelog.get("file"))
 
     # Prefer new key 'version_targets', but support legacy 'files' for backward compatibility
     files = data.get("version_targets")
