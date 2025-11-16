@@ -130,6 +130,7 @@ def create_parser() -> argparse.ArgumentParser:
     gen_parser.add_argument("--staged", action="store_true", help="Use staged changes (git diff --staged)")
     gen_parser.add_argument("--files", nargs="*", default=[], help="Additional files to include")
     gen_parser.add_argument("--ticket", type=str, help="Ticket reference to include as footer")
+    gen_parser.add_argument("--yes", "-y", action="store_true", help="Automatically commit without prompting")
     gen_parser.add_argument("--no-ai", dest="no_ai", action="store_true", help="Disable AI and use heuristics only")
     gen_parser.add_argument("--model", type=str, help="AI model (default from config)")
     gen_parser.add_argument("--temperature", type=float, help="Sampling temperature (default from config)")

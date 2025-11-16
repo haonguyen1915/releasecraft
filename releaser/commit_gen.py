@@ -5,7 +5,7 @@ import os
 import subprocess
 from typing import Dict, List, Optional
 
-from .console import logger
+from .console import logger, prompt_confirmation, bordered
 from .config.load import load_config
 from .ai.engine.openai_instructor import generate_commit_message
 
@@ -116,6 +116,33 @@ def run(args: argparse.Namespace) -> int:
             logger.error(f"Failed to write commit message to {out_path}: {e}")
             return 1
     else:
-        # Print to stdout
-        print(text)
+        # Display the generated commit message
+        bordered.create_bordered_content(
+            text,
+            title="Generated Commit Message",
+            dry_run=False
+        )
+
+        # Check if --yes flag is set
+        auto_commit = getattr(args, "yes", False)
+
+        # Ask user if they want to commit (or auto-commit if --yes)
+        should_commit = auto_commit or prompt_confirmation("Do you want to create a commit with this message?", default=True)
+
+        if should_commit:
+            try:
+                # Create the commit
+                subprocess.run(
+                    ["git", "commit", "-m", text],
+                    check=True,
+                    capture_output=True,
+                    text=True
+                )
+                logger.success("Commit created successfully!")
+            except subprocess.CalledProcessError as e:
+                logger.error(f"Failed to create commit: {e.stderr}")
+                return 1
+        else:
+            logger.info("Commit not created. You can copy the message above if needed.")
+
     return 0
