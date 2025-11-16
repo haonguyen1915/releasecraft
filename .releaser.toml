@@ -13,10 +13,10 @@ use_native = false
 [release]
 create_commit = true
 create_tag = true
-push = false
+push = true
 version_targets = []
 change_log_file = "CHANGELOG.md"
-allow_dirty = false
+allow_dirty = true
 
 [release.version]
 strategy = "auto"

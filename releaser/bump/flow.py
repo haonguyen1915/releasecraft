@@ -51,9 +51,44 @@ def _git_commit_tag_push(files_to_add: list[str], tag_name: str, notes: str, do_
         subprocess.run(["git", "tag", "-a", tag_name, "-m", tag_msg], check=True)
 
     if do_push:
-        subprocess.run(["git", "push"], check=True)
-        if do_tag:
-            subprocess.run(["git", "push", "--tags"], check=True)
+        # Determine if an upstream is already configured
+        upstream_ref: str | None = None
+        try:
+            upstream_ref = subprocess.check_output(
+                ["git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"],
+                stderr=subprocess.STDOUT,
+                text=True,
+            ).strip()
+        except subprocess.CalledProcessError:
+            upstream_ref = None
+
+        if upstream_ref:
+            # Upstream exists; regular push then ensure tags are sent
+            subprocess.run(["git", "push"], check=True)
+            if do_tag:
+                # Prefer follow-tags; fall back to --tags for broader compatibility
+                try:
+                    subprocess.run(["git", "push", "--follow-tags"], check=True)
+                except subprocess.CalledProcessError:
+                    subprocess.run(["git", "push", "--tags"], check=True)
+        else:
+            # No upstream; set upstream on first push
+            current_branch = subprocess.check_output(
+                ["git", "branch", "--show-current"], text=True
+            ).strip()
+            if not current_branch:
+                raise subprocess.CalledProcessError(1, "git branch --show-current")
+
+            remotes = subprocess.check_output(["git", "remote"], text=True).strip().splitlines()
+            remote = "origin" if "origin" in remotes else (remotes[0] if remotes else None)
+            if not remote:
+                # Surface a git-like error to be handled by caller
+                raise subprocess.CalledProcessError(1, "git push")
+
+            subprocess.run(["git", "push", "-u", remote, current_branch], check=True)
+            if do_tag:
+                # Push only the newly created tag explicitly
+                subprocess.run(["git", "push", remote, tag_name], check=True)
 
 
 def _read_notes_from_flags(notes: Optional[str], notes_file: Optional[str]) -> str:
