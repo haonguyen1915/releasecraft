@@ -667,4 +667,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Made with ❤️ by the ReleaseCraft team**
 
-For more information and updates, visit our [GitHub repository](https://github.com/yourusername/releasecraft).
+For more information and updates, visit our [GitHub repository](https://github.com/haonguyen1915).
