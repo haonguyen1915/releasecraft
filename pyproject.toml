@@ -73,3 +73,9 @@ disable = [ "missing-module-docstring", "missing-class-docstring", "missing-func
 where = [ ".",]
 include = [ "releaser*",]
 exclude = [ "tests*",]
+
+[tool.setuptools.package-data]
+releaser = [
+    "ai/prompts/*.md",
+    "ai/prompts/*.md.j2",
+]
