@@ -192,6 +192,11 @@ def create_parser() -> argparse.ArgumentParser:
         "--staged", action="store_true", help="Use staged changes (git diff --staged)"
     )
     gen_parser.add_argument(
+        "--auto-add-all",
+        action="store_true",
+        help="Run 'git add -A' before generating the commit message",
+    )
+    gen_parser.add_argument(
         "--files", nargs="*", default=[], help="Additional files to include"
     )
     gen_parser.add_argument(

@@ -49,6 +49,15 @@ def _get_recent_commit_subjects(n: int) -> List[str]:
 
 
 def run(args: argparse.Namespace) -> int:
+    # Optional: auto-stage all changes before computing diffs
+    if getattr(args, "auto_add_all", False):
+        try:
+            _run_git(["add", "-A"])
+            logger.info("Staged all changes with 'git add -A'.")
+        except Exception as e:
+            logger.error(f"Failed to auto-add changes: {e}")
+            return 1
+
     # Resolve file list
     files: List[str] = []
     if getattr(args, "staged", False):
