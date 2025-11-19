@@ -19,6 +19,7 @@ from releaser.console import (
 )
 from releaser.config.load import load_config
 from releaser.config.model import AppConfig
+from releaser.logging_setup import logger_setup
 from releaser.bump import providers
 from releaser.bump.semver import apply_prerelease, bump_base, finalize, parse
 from releaser.bump.rules import check_bump_allowed, check_prerelease_allowed
@@ -174,6 +175,9 @@ def _run_impl(args) -> int:
     try:
         # Load config
         cfg: AppConfig = load_config(getattr(args, "config", None))
+
+        # Configure Python logging based on config
+        logger_setup(level=getattr(cfg.logging, "level", "warning"), include=["releaser"])
 
         # Evaluate bump rules
         allowed, reason = check_bump_allowed(cfg)

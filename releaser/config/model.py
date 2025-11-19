@@ -165,6 +165,13 @@ class ProviderConfig:
 
 
 @dataclass
+class LoggingConfig:
+    """Logging configuration."""
+
+    level: str = "warning"  # debug|info|warning|error|critical
+
+
+@dataclass
 class AppConfig:
     """Main application configuration."""
 
@@ -176,6 +183,7 @@ class AppConfig:
     commit_gen: CommitGenConfig = field(default_factory=CommitGenConfig)
     bump_rules: BumpRulesConfig = field(default_factory=BumpRulesConfig)
     provider: ProviderConfig = field(default_factory=ProviderConfig)
+    logging: LoggingConfig = field(default_factory=LoggingConfig)
 
     # Resolved locations
     config_path: Optional[str] = None

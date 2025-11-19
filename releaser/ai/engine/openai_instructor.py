@@ -14,6 +14,7 @@ from __future__ import annotations
 from typing import Any, Type, TypeVar, Optional, Iterable
 import difflib
 from pathlib import Path
+import logging
 
 from pydantic import BaseModel
 
@@ -50,6 +51,9 @@ class _RNFallback(ReleaseNotes):
     # Ensure attributes exist for consumers that access them
     sections: list = []
     limitations: list = []
+
+
+log = logging.getLogger(__name__)
 
 
 def generate_structured(
@@ -350,6 +354,8 @@ def generate_commit_message(
 
     # AI path
     try:
+        log.debug("AI system prompt for commit message:\n%s", system_template)
+        log.debug("AI user prompt for commit message:\n%s", user_prompt)
         cm = generate_structured(
             api_key=api_key,
             model=model,
@@ -363,6 +369,12 @@ def generate_commit_message(
             cm.scope = None
         if demote_feat_if_similar:
             cm = _maybe_demote_feat(cm, diffs, recent_subjects)
+        log.debug(
+            "AI commit message result: type=%s scope=%s subject=%s",
+            cm.type,
+            cm.scope,
+            cm.subject,
+        )
         return cm
     except ImportError:
         # As a last resort
@@ -543,7 +555,9 @@ def generate_release_notes(
 
     # Generate structured output using the generic function
     try:
-        return generate_structured(
+        log.debug("AI system prompt for release notes:\n%s", system_template)
+        log.debug("AI user prompt for release notes:\n%s", user_prompt)
+        rn = generate_structured(
             api_key=api_key,
             model=model,
             temperature=temperature,
@@ -552,6 +566,14 @@ def generate_release_notes(
             user_prompt=user_prompt,
             response_model=ReleaseNotes,
         )
+        try:
+            log.debug(
+                "AI release notes output markdown:\n%s",
+                rn.to_markdown(),
+            )
+        except Exception:
+            pass
+        return rn
     except ImportError:
         # If AI libs are not available, return a non-AI draft for graceful degradation
         highlights = [c.get("message", "") for c in commits[:5] if c.get("message")]

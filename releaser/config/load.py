@@ -270,6 +270,14 @@ def _merge_into_config(cfg: AppConfig, data: Dict[str, Any]) -> None:
         if "setuptools" in provider:
             cfg.provider.setuptools = dict(provider.get("setuptools") or {})
 
+    # [logging] section
+    logging_s = data.get("logging", {}) or {}
+    if logging_s:
+        if "level" in logging_s:
+            lvl = str(logging_s.get("level") or cfg.logging.level).lower()
+            if lvl in {"debug", "info", "warning", "error", "critical"}:
+                cfg.logging.level = lvl
+
 
 def load_config(config_path: Optional[str] = None) -> AppConfig:
     """Load configuration with precedence: explicit path > repo > home > defaults.
