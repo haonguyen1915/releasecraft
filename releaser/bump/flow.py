@@ -281,55 +281,91 @@ def _run_impl(args) -> int:
     do_finalize = bool(getattr(args, "finalize", False))
     dry_run = bool(getattr(args, "dry_run", False))
 
-    target_version = None
+    target_version: Optional[str] = None
 
     interactive = False
-    if not bump_type and not manual and not do_finalize and not do_pre:
+    # Enable interactive flow only for CLI usage (argparse.Namespace with command="bump")
+    interactive_allowed = getattr(args, "command", None) == "bump"
+    if interactive_allowed and not bump_type and not manual and not do_finalize:
         # Decide pre-release capability
         pre_allowed, pre_reason, channel = check_prerelease_allowed(cfg)
         is_pre_now = parse(current_version).pre is not None
-        # Interactive numeric selection that includes pre-release choices when allowed
-        bt, manual_v, pre_sel, finalize_sel = _interactive_pick_bump3(
-            current_version,
-            tag_prefix,
-            pre_allowed,
-            channel,
-            cfg.release.pre_release.auto_increment,
-            is_pre_now,
-        )
-        interactive = True
-        do_pre = pre_sel or do_pre
-        do_finalize = finalize_sel or do_finalize
-        if bt == "manual":
-            manual = manual_v
+
+        if do_pre:
+            # Pre-release mode: show options that produce pre-release versions
+            if not pre_allowed:
+                logger.error(pre_reason or "Pre-release not allowed")
+                return 1
+            bt, manual_v, pre_sel, finalize_sel = _interactive_pick_bump3(
+                current_version,
+                tag_prefix,
+                pre_allowed,
+                channel,
+                cfg.release.pre_release.auto_increment,
+                is_pre_now,
+            )
+            interactive = True
+            do_pre = pre_sel or do_pre
+            do_finalize = finalize_sel or do_finalize
+            if bt == "manual":
+                manual = manual_v
+            elif bt:
+                bump_type = bt
         else:
-            bump_type = bt
+            # Stable mode: interactive numeric bump selection (patch/minor/major/manual)
+            bt, manual_v = _interactive_pick_bump2(current_version, tag_prefix)
+            interactive = True
+            if bt == "manual":
+                manual = manual_v
+            else:
+                bump_type = bt
 
     if do_finalize:
         target_version = finalize(current_version)
     elif manual:
         target_version = manual.strip()
     else:
-        current_base = parse(current_version).base()
-        # Determine base to apply
+        parsed_current = parse(current_version)
+        current_base = parsed_current.base()
         if do_pre:
-            # Pre-release: if no explicit bump type, use current base. Otherwise bump base then apply pre.
-            base_for_pre = (
-                bump_base(current_base, bump_type) if bump_type else current_base
-            )
-            # Check pre-release rules
+            # Pre-release mode:
+            # - From a stable version: bump base (major/minor/patch) then start rc.1.
+            # - From an existing pre-release:
+            #     * With no bump_type or bump_type == "continue": increment rc on same base.
+            #     * With bump_type in {major,minor,patch}: bump base then start new rc.1.
             pre_allowed, pre_reason, channel = check_prerelease_allowed(cfg)
             if not pre_allowed:
                 logger.error(pre_reason or "Pre-release not allowed")
                 return 1
+
+            is_pre_now = parsed_current.pre is not None
+
+            if is_pre_now:
+                # Already on a pre-release
+                if not bump_type or bump_type == "continue":
+                    # Continue pre-release on the same base (rc.N -> rc.N+1)
+                    base_for_pre = current_base
+                    previous_version = current_version
+                else:
+                    # Bump base then start a new pre-release sequence (rc.1)
+                    base_for_pre = bump_base(current_base, bump_type)
+                    previous_version = None
+            else:
+                # Stable version: bump base (auto or forced) then start rc.1
+                effective_bump_type = bump_type or _recommend_bump_type()
+                base_for_pre = bump_base(current_base, effective_bump_type)
+                previous_version = None
+
             target_version = apply_prerelease(
                 base_for_pre,
-                previous_version=current_version,
+                previous_version=previous_version,
                 channel=channel,
                 auto_increment=cfg.release.pre_release.auto_increment,
             )
         else:
-            base_next = bump_base(current_base, bump_type or _recommend_bump_type())
+            # Stable bump (no pre-release)
+            effective_bump_type = bump_type or _recommend_bump_type()
+            base_next = bump_base(current_base, effective_bump_type)
             target_version = base_next
 
     tag_name = f"{tag_prefix}{target_version}"
@@ -598,26 +634,58 @@ def _interactive_pick_bump3(
     auto_increment: bool,
     is_pre_now: bool,
 ) -> Tuple[Optional[str], Optional[str], bool, bool]:
-    """Numeric selection UI combining bump type and release line.
+    """Numeric selection UI for pre-release mode.
 
-    Returns: (bump_type or 'manual', manual_value, do_pre, do_finalize)
+    Returns: (bump_type or 'manual' or 'continue', manual_value, do_pre, do_finalize)
     """
-    base = parse(current_v).base()
-    patch_target = f"{tag_prefix}{bump_base(base, 'patch')}"
-    minor_target = f"{tag_prefix}{bump_base(base, 'minor')}"
-    major_target = f"{tag_prefix}{bump_base(base, 'major')}"
+    parsed = parse(current_v)
+    base = parsed.base()
+    recommended = _recommend_bump_type()
 
-    # Pre-release preview applies to current base (no bump)
-    pre_preview = f"{tag_prefix}{apply_prerelease(base, previous_version=current_v, channel=channel, auto_increment=auto_increment)}"
+    entries: list[Tuple[Optional[str], str, bool, bool]] = []
+    # (bump_type/manual/continue, label, do_pre, do_finalize)
 
-    entries: list[Tuple[str, str, bool, bool]] = []
-    # (bump_type/manual, label, do_pre, do_finalize)
-    entries.append(("patch", f"Patch → {patch_target}", False, False))
-    entries.append(("minor", f"Minor → {minor_target}", False, False))
-    entries.append(("major", f"Major → {major_target}", False, False))
-    if pre_allowed:
-        entries.append((None, f"Pre-release ({channel}) → {pre_preview}", True, False))
     if is_pre_now:
+        # Current version is already a pre-release
+        # 1) Continue pre-release on the same base (rc.N -> rc.N+1)
+        cont_v = apply_prerelease(
+            base,
+            previous_version=current_v,
+            channel=channel,
+            auto_increment=auto_increment,
+        )
+        entries.append(
+            (
+                "continue",
+                f"Continue pre-release → {tag_prefix}{cont_v}",
+                True,
+                False,
+            )
+        )
+
+        # 2–4) Bump base (patch/minor/major) and start new pre-release sequence
+        for key, label_prefix in [
+            ("patch", "Patch base"),
+            ("minor", "Minor base"),
+            ("major", "Major base"),
+        ]:
+            bumped_base = bump_base(base, key)
+            pre_v = apply_prerelease(
+                bumped_base,
+                previous_version=None,
+                channel=channel,
+                auto_increment=auto_increment,
+            )
+            entries.append(
+                (
+                    key,
+                    f"{label_prefix} → {tag_prefix}{pre_v}",
+                    True,
+                    False,
+                )
+            )
+
+        # 5) Finalize current pre-release to stable
         entries.append(
             (
                 None,
@@ -626,13 +694,40 @@ def _interactive_pick_bump3(
                 True,
             )
         )
+    else:
+        # Current version is stable: bump base first, then start pre-release
+        for key, label_prefix in [
+            ("patch", "Patch"),
+            ("minor", "Minor"),
+            ("major", "Major"),
+        ]:
+            bumped_base = bump_base(base, key)
+            pre_v = apply_prerelease(
+                bumped_base,
+                previous_version=None,
+                channel=channel,
+                auto_increment=auto_increment,
+            )
+            entries.append(
+                (
+                    key,
+                    f"{label_prefix} → {tag_prefix}{pre_v}",
+                    True,
+                    False,
+                )
+            )
+
+    # Manual + Cancel entries (common to both cases)
     entries.append(("manual", "Manual → enter exact version", False, False))
-    entries.append((None, "Cancel", False, True))
+    entries.append((None, "Cancel", False, False))
 
     # Print list
-    console.print("\n[bold]Select bump type[/bold]")
-    for i, (_k, label, _p, _f) in enumerate(entries, start=1):
-        console.print(f"  {i}) {label}")
+    console.print("\n[bold]Select pre-release option[/bold]")
+    for i, (key, label, _p, _f) in enumerate(entries, start=1):
+        suffix = ""
+        if key in {"patch", "minor", "major"} and key == recommended:
+            suffix = " [recommended]"
+        console.print(f"  {i}) {label}{suffix}")
 
     # Choose
     while True:
@@ -644,7 +739,7 @@ def _interactive_pick_bump3(
                 if _label.startswith("Cancel"):
                     raise SystemExit(0)
                 if k == "manual":
-                    manual = prompt_input("Enter version (e.g., 1.2.3)")
+                    manual = prompt_input("Enter version (e.g., 1.2.3-rc.1)")
                     return "manual", manual, False, False
                 return k, None, p, fz
         console.print("[yellow]Please enter a valid number from the list[/yellow]")

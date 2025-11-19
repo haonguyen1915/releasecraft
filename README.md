@@ -144,7 +144,7 @@ releaser init --project-type poetry
 
 ### releaser bump
 
-Bump version and create release.
+Bump version and create release (interactive by default).
 
 ```bash
 # Auto-detect version bump from commits
@@ -178,7 +178,12 @@ releaser bump --changelog
 releaser bump --push
 ```
 
-**Options:**
+**Interactive behavior (no `--type`/`--manual`):**
+- On a stable version (e.g. `1.0.0`), `releaser bump` shows a menu: Patch → `1.0.1`, Minor → `1.1.0`, Major → `2.0.0`, Manual, Cancel.
+- On a stable version, `releaser bump --pre` shows: Patch → `1.0.1-rc.1`, Minor → `1.1.0-rc.1`, Major → `2.0.0-rc.1`, Manual, Cancel.
+- On a pre-release (e.g. `1.0.0-rc.1`), `releaser bump --pre` shows: Continue pre-release → `1.0.0-rc.2`, Patch base → `1.0.1-rc.1`, Minor base → `1.1.0-rc.1`, Major base → `2.0.0-rc.1`, Finalize to stable → `1.0.0`, Manual, Cancel.
+
+**Options (flags):**
 - `--manual VERSION`: Set exact version
 - `--type {major,minor,patch}`: Force bump type
 - `--pre`: Create pre-release version
@@ -497,9 +502,9 @@ releaser bump --changelog --push
 # On develop branch
 git checkout develop
 
-# Create pre-release
+# Create pre-release for the next version
 releaser bump --pre
-# Output: 1.2.0-rc.1
+# Example output: 1.2.0-rc.1 (base bumped from 1.1.0 to 1.2.0, then -rc.1)
 
 # More changes...
 releaser bump --pre
@@ -613,14 +618,14 @@ block = ["main", "master", "hotfix/*"]
 **Usage:**
 
 ```bash
-# On develop branch - creates 1.0.0-rc.1
+# On develop branch - creates 1.1.0-rc.1
 git checkout develop
 releaser bump --pre
 
-# Subsequent pre-releases increment: 1.0.0-rc.2, 1.0.0-rc.3, etc.
+# Subsequent pre-releases increment: 1.1.0-rc.2, 1.1.0-rc.3, etc.
 releaser bump --pre
 
-# On main branch - finalizes to 1.0.0
+# On main branch - finalizes to 1.1.0
 git checkout main
 releaser bump --finalize
 ```

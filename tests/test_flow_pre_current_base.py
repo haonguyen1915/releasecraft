@@ -3,8 +3,8 @@ from types import SimpleNamespace
 from releaser.bump.flow import run as run_bump
 
 
-def test_pre_release_uses_current_base(tmp_path, monkeypatch):
-    # Project with current version 0.1.0
+def test_pre_release_bumps_base_for_stable(tmp_path, monkeypatch):
+    # Project with current stable version 0.1.0
     (tmp_path / "pyproject.toml").write_text(
         """
 [project]
@@ -42,6 +42,8 @@ default_channel = "rc"
 
     rc = run_bump(args)
     assert rc == 0
-    # pyproject should now be 0.1.0-rc.1 applied to current base, not bumped
+    # pyproject should now be 0.1.1-rc.1:
+    # - base bumped from 0.1.0 to 0.1.1 (patch)
+    # - then first pre-release applied to the new base
     txt = (tmp_path / "pyproject.toml").read_text()
-    assert 'version = "0.1.0-rc.1"' in txt
+    assert 'version = "0.1.1-rc.1"' in txt

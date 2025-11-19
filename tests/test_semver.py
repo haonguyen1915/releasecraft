@@ -21,8 +21,13 @@ def test_semver_apply_prerelease_increment():
         "1.2.3", previous_version=None, channel="rc", auto_increment=True
     )
     assert v1 == "1.2.3-rc.1"
-    # Continue sequence
+    # Continue sequence from canonical rc.N form
     v2 = semver.apply_prerelease(
         "1.2.3", previous_version=v1, channel="rc", auto_increment=True
     )
     assert v2 == "1.2.3-rc.2"
+    # Continue sequence from legacy rcN form
+    v3 = semver.apply_prerelease(
+        "1.2.3", previous_version="1.2.3-rc1", channel="rc", auto_increment=True
+    )
+    assert v3 == "1.2.3-rc.2"

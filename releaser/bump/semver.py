@@ -78,8 +78,10 @@ def apply_prerelease(
     if previous_version:
         prev = parse(previous_version)
         if prev.base() == base_version and prev.pre:
-            # Try to match channel.N
+            # Try to match channel.N (preferred) or channelN (backwards compatible)
             m = re.match(rf"^{re.escape(channel)}\.(\d+)$", prev.pre)
+            if not m:
+                m = re.match(rf"^{re.escape(channel)}(\d+)$", prev.pre)
             if m:
                 n = int(m.group(1))
                 next_n = n + 1 if auto_increment else n

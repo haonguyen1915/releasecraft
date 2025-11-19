@@ -50,7 +50,7 @@ def check_prerelease_allowed(cfg: AppConfig) -> Tuple[bool, Optional[str], str]:
     # If we cannot determine a branch (e.g., not a git repo),
     # allow pre-release when globally enabled to keep local workflows simple.
     if not branch:
-        return True, None
+        return True, None, cfg.release.pre_release.default_channel
     if cfg.release.pre_release.block and _match_any(
         branch, cfg.release.pre_release.block
     ):
