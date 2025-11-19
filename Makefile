@@ -13,18 +13,11 @@ lint:
 	@echo "🚀 Checking poetry.lock file"
 	poetry check --lock
 	@echo "🚀 Linting (ruff/flake8)"
-	# Prefer ruff via poetry; fallback to system ruff, then flake8
-	(POETRY_VIRTUALENVS_CREATE=false poetry run ruff check) \
-		|| (ruff check) \
-		|| (flake8 --max-line-length=120 --extend-ignore=E501,E203,W503,W391,W291,E402,E741,F811,F841 releaser || true)
+	poetry run ruff check
 	@echo "🚀 Checking with pylint"
-	# Run via poetry if available; otherwise use system pylint
-	(POETRY_VIRTUALENVS_CREATE=false poetry run pylint -j 1 --persistent=no releaser) \
-		|| pylint -j 1 --persistent=no releaser || true
+	poetry run pylint releaser
 	@echo "🚀 Checking with mypy"
-	# Prefer poetry; fallback to system mypy; skip if not installed
-	(POETRY_VIRTUALENVS_CREATE=false poetry run mypy releaser) \
-		|| (mypy releaser || echo "(Skipping mypy: not installed)")
+	poetry run mypy releaser
 	@echo "🟢 All checks have passed"
 
 .PHONY: lint_test

@@ -15,7 +15,7 @@ import re
 import subprocess
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 
 class BranchType(Enum):
@@ -433,12 +433,12 @@ class GitWorkflowValidator:
 
         return commits_info
 
-    def get_commit_statistics(self) -> Dict:
+    def get_commit_statistics(self) -> Dict[str, Any]:
         """Generate statistics about commits and branches."""
         branches = self.get_all_branches()
         all_commits = self.get_all_commits_with_branches(200)
 
-        stats = {
+        stats: Dict[str, Any] = {
             "total_commits": len(all_commits),
             "branches": {"total": len(branches), "by_type": {}},
             "commits_by_type": {},
@@ -478,7 +478,7 @@ class GitWorkflowValidator:
                 pass
 
         # Analyze commits
-        dates = []
+        dates: List[str] = []
         for commit in all_commits:
             # Count by commit type
             commit_type = "other"
@@ -601,15 +601,20 @@ class GitWorkflowValidator:
         processed_commits = set()
 
         # Reverse commits for chronological order
-        commits_chronological = list(reversed(all_commits))
+        commits_chronological: List[Dict[str, Any]] = list(reversed(all_commits))
+        commits_to_show: List[Optional[Dict[str, Any]]]
 
         # Show only first 3 and last 5 commits if more than 10 total
         if len(commits_chronological) > 10:
-            commits_to_show = (
-                commits_chronological[:3] + [None] + commits_chronological[-5:]
-            )
+            commits_to_show = cast(List[Optional[Dict[str, Any]]], [])
+            commits_to_show.extend(commits_chronological[:3])
+            commits_to_show.append(None)
+            commits_to_show.extend(commits_chronological[-5:])
         else:
-            commits_to_show = commits_chronological
+            # Upcast to Optional[Dict[str, Any]] for uniform typing
+            commits_to_show = cast(
+                List[Optional[Dict[str, Any]]], list(commits_chronological)
+            )
 
         # Process selected commits
         for i, commit in enumerate(commits_to_show):
@@ -794,7 +799,7 @@ class GitWorkflowValidator:
         return "\n".join(report)
 
 
-def main():
+def main() -> int:
     """Main function to run the validator."""
     import argparse
 

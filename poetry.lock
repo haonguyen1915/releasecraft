@@ -424,7 +424,6 @@ description = "Cross-platform colored terminal text."
 optional = false
 python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*,>=2.7"
 groups = ["main"]
-markers = "extra == \"dev\" and sys_platform == \"win32\" or platform_system == \"Windows\""
 files = [
     {file = "colorama-0.4.6-py2.py3-none-any.whl", hash = "sha256:4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6"},
     {file = "colorama-0.4.6.tar.gz", hash = "sha256:08695f5cb7ed6e0531a20572697297273c47b8cae5a63ffc6d6ed5c201be6e44"},
@@ -3210,4 +3209,4 @@ dev = ["black", "flake8", "mypy", "pytest", "pytest-cov"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.9,<4.0"
-content-hash = "23aeccab58deb2a6474a354f330c0e504af7027312e7f13138398238ff73848a"
+content-hash = "182ee4ac1ddb254b8a517f68ddd28c6870fbf6399eead5d1f28ffea7c840dc1d"

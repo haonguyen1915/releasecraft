@@ -7,7 +7,7 @@ import re
 from pathlib import Path
 import unicodedata
 from dataclasses import dataclass
-from typing import Optional, Tuple
+from typing import Any, Optional, Tuple
 
 from releaser.console import (
     console,
@@ -19,7 +19,6 @@ from releaser.console import (
 )
 from releaser.config.load import load_config
 from releaser.config.model import AppConfig
-from releaser.logging_setup import logger_setup
 from releaser.bump import providers
 from releaser.bump.semver import apply_prerelease, bump_base, finalize, parse
 from releaser.bump.rules import check_bump_allowed, check_prerelease_allowed
@@ -136,7 +135,7 @@ def _recommend_bump_type() -> str:
     # Use commit history to recommend (major/minor/patch)
     commits = git_utils.get_commits_since_tag(git_utils.get_latest_tag())
     try:
-        return git_utils.determine_version_bump(commits)  # type: ignore[attr-defined]
+        return git_utils.determine_version_bump(commits)
     except Exception:
         return "patch"
 
@@ -171,13 +170,10 @@ def _interactive_pick_bump(
     return key, None
 
 
-def _run_impl(args) -> int:
+def _run_impl(args: Any) -> int:
     try:
         # Load config
         cfg: AppConfig = load_config(getattr(args, "config", None))
-
-        # Configure Python logging based on config
-        logger_setup(level=getattr(cfg.logging, "level", "warning"), include=["releaser"])
 
         # Evaluate bump rules
         allowed, reason = check_bump_allowed(cfg)
@@ -503,11 +499,17 @@ def _run_impl(args) -> int:
     files_to_add: list[str] = []
 
     if getattr(args, "changelog", False):
-        changelog_path = getattr(args, "changelog_file", None) or "CHANGELOG.md"
+        changelog_path_str = getattr(args, "changelog_file", None) or "CHANGELOG.md"
+        changelog_path = str(changelog_path_str)
         # Prepare changelog content for preview or write
         changelog_date = datetime.date.today().isoformat()
         changelog_content = _build_changelog_content(
-            cfg, current_version, tag_prefix, target_version, changelog_date, notes_text
+            cfg,
+            current_version,
+            tag_prefix,
+            str(target_version),
+            changelog_date,
+            notes_text or "",
         )
 
         if not dry_run:
@@ -554,9 +556,9 @@ def _run_impl(args) -> int:
 
     # Write version to file(s) after confirming not dry-run
     updated_file = provider.write_version(
-        target_version, use_native=cfg.project.use_native
+        str(target_version), use_native=cfg.project.use_native
     )
-    files_to_add.append(updated_file)
+    files_to_add.append(str(updated_file))
 
     # Update additional files from config (e.g., pkg/__init__.py:__version__, setup.cfg:metadata.version)
     logger.debug(f"Additional file targets: {cfg.release.version_targets}")
@@ -566,7 +568,7 @@ def _run_impl(args) -> int:
         except ValueError:
             continue
         _update_additional_file_version(
-            path.strip(), selector.strip(), target_version, files_to_add
+            path.strip(), selector.strip(), str(target_version), files_to_add
         )
         logger.debug(f"Updated file target: {entry}")
 
@@ -646,8 +648,8 @@ def _interactive_pick_bump3(
     base = parsed.base()
     recommended = _recommend_bump_type()
 
-    entries: list[Tuple[Optional[str], str, bool, bool]] = []
-    # (bump_type/manual/continue, label, do_pre, do_finalize)
+    entries: list[Tuple[str, str, bool, bool]] = []
+    # (bump_type/manual/continue/finalize/cancel, label, do_pre, do_finalize)
 
     if is_pre_now:
         # Current version is already a pre-release
@@ -692,7 +694,7 @@ def _interactive_pick_bump3(
         # 5) Finalize current pre-release to stable
         entries.append(
             (
-                None,
+                "finalize",
                 f"Finalize current pre-release → {tag_prefix}{finalize(current_v)}",
                 False,
                 True,
@@ -723,7 +725,7 @@ def _interactive_pick_bump3(
 
     # Manual + Cancel entries (common to both cases)
     entries.append(("manual", "Manual → enter exact version", False, False))
-    entries.append((None, "Cancel", False, False))
+    entries.append(("cancel", "Cancel", False, False))
 
     # Print list
     console.print("\n[bold]Select pre-release option[/bold]")
@@ -924,7 +926,7 @@ def _prompt_multiline_notes() -> str:
     return "\n".join(lines).strip()
 
 
-def run(args) -> int:
+def run(args: Any) -> int:
     """Wrapper that normalizes early exits from `_run_impl`.
 
     Converts internal `_Exit` exceptions to integer exit codes for the CLI.

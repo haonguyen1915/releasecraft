@@ -94,10 +94,17 @@ def detect_cpu_limit() -> Optional[float]:
         pass
 
     # Try cgroup v1
-    quota = _read_cgroup_value("/sys/fs/cgroup/cpu/cpu.cfs_quota_us")
-    period = _read_cgroup_value("/sys/fs/cgroup/cpu/cpu.cfs_period_us")
-    if quota and period and quota > 0 and period > 0:
-        return max(1.0, float(quota) / float(period))
+    quota_raw = _read_cgroup_value("/sys/fs/cgroup/cpu/cpu.cfs_quota_us")
+    period_raw = _read_cgroup_value("/sys/fs/cgroup/cpu/cpu.cfs_period_us")
+    if (
+        quota_raw is not None
+        and period_raw is not None
+        and quota_raw > 0
+        and period_raw > 0
+    ):
+        quota = float(quota_raw)
+        period = float(period_raw)
+        return max(1.0, quota / period)
 
     # Fallback to system CPU count
     if psutil:

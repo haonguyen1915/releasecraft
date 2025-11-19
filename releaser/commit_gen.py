@@ -56,8 +56,13 @@ def run(args: argparse.Namespace) -> int:
     files_arg = getattr(args, "files", []) or []
     files.extend(files_arg)
     # Deduplicate while preserving order
-    seen = set()
-    files = [f for f in files if not (f in seen or seen.add(f))]
+    seen: set[str] = set()
+    deduped_files: List[str] = []
+    for path in files:
+        if path not in seen:
+            seen.add(path)
+            deduped_files.append(path)
+    files = deduped_files
 
     if not files:
         logger.error(
@@ -76,26 +81,31 @@ def run(args: argparse.Namespace) -> int:
         if getattr(args, "no_ai", False)
         else os.environ.get(getattr(ai_cfg, "api_key_env", "OPENAI_API_KEY"))
     )
-    model = getattr(args, "model", None) or getattr(ai_cfg, "model", "gpt-4o-mini")
+    model_obj = getattr(args, "model", None)
+    if model_obj is None and ai_cfg is not None:
+        model_obj = getattr(ai_cfg, "model", "gpt-4o-mini")
+    model: str = str(model_obj or "gpt-4o-mini")
     try:
-        temperature = float(
-            getattr(args, "temperature", None) or getattr(ai_cfg, "temperature", 0.2)
-        )
+        raw_temp = getattr(args, "temperature", None)
+        if raw_temp is None and ai_cfg is not None:
+            raw_temp = getattr(ai_cfg, "temperature", 0.2)
+        temperature = float(raw_temp) if raw_temp is not None else 0.2
     except Exception:
         temperature = 0.2
     try:
-        max_tokens = int(
-            getattr(args, "max_tokens", None) or getattr(ai_cfg, "max_tokens", 600)
-        )
+        raw_max_tokens = getattr(args, "max_tokens", None)
+        if raw_max_tokens is None and ai_cfg is not None:
+            raw_max_tokens = getattr(ai_cfg, "max_tokens", 600)
+        max_tokens = int(raw_max_tokens) if raw_max_tokens is not None else 600
     except Exception:
         max_tokens = 600
 
     # Determine history count (CLI overrides config when provided)
     history_opt = getattr(args, "history", None)
     if history_opt is None:
-        history_n = int(
-            getattr(getattr(cfg, "commit_gen", None), "history_commits", 10)
-        )
+        history_cfg = getattr(cfg, "commit_gen", None)
+        raw_history = getattr(history_cfg, "history_commits", 10) if history_cfg else 10
+        history_n = int(raw_history)
     else:
         history_n = int(history_opt)
 
@@ -117,17 +127,17 @@ def run(args: argparse.Namespace) -> int:
         ),
     )
 
-    text = cm.to_text()
+    text: str = cm.to_text()
 
     # Output destination
-    out_path: Optional[str] = getattr(args, "output", None)
-    if out_path:
+    out_path_obj: Optional[str] = getattr(args, "output", None)
+    if out_path_obj:
         try:
-            with open(out_path, "w", encoding="utf-8") as f:
+            with open(str(out_path_obj), "w", encoding="utf-8") as f:
                 f.write(text + "\n")
-            logger.success(f"Wrote commit message to {out_path}")
+            logger.success(f"Wrote commit message to {out_path_obj}")
         except Exception as e:
-            logger.error(f"Failed to write commit message to {out_path}: {e}")
+            logger.error(f"Failed to write commit message to {out_path_obj}: {e}")
             return 1
     else:
         # Display the generated commit message

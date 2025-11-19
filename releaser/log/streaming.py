@@ -17,7 +17,7 @@ import sys
 import threading
 import time
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple, IO
 
 import socketio  # type: ignore[import-untyped]
 
@@ -50,16 +50,16 @@ class LogStreamingClient:
         self.service_name = service_name or "unknown-service"
         self.auth_token = auth_token
         self.echo_enabled = echo_enabled
-        self.log_queue: queue.Queue = queue.Queue()
+        self.log_queue: "queue.Queue[Dict[str, Any]]" = queue.Queue()
         self.is_running = False
         self.socket_client: Optional[socketio.AsyncClient] = None
-        self.original_stdout = None
-        self.original_stderr = None
+        self.original_stdout: Optional[IO[str]] = None
+        self.original_stderr: Optional[IO[str]] = None
         self.kubectl_capture = KubernetesLogCapture(self.log_queue, echo_enabled)
         self.server_name = server_name or f"server-{int(time.time() * 1000)}"
         self.server_info = server_info or {}
         self._registration_complete = asyncio.Event()
-        self.public_tunnel_info: Optional[Dict] = None
+        self.public_tunnel_info: Optional[Dict[str, Any]] = None
         self.k8s_events_capture = KubernetesEventsCapture(self.log_queue, echo_enabled)
 
     @staticmethod
@@ -86,11 +86,14 @@ class LogStreamingClient:
         try:
             self.socket_client = socketio.AsyncClient(reconnection=True)
 
-            @self.socket_client.event
-            async def connect():
+            @self.socket_client.event  # type: ignore[misc]
+            async def connect() -> None:
                 console.print("✓ [green]Connected to log server[/green]")
                 # Register this client
-                await self.socket_client.emit(
+                client = self.socket_client
+                if client is None:
+                    return
+                await client.emit(
                     "server_registration",
                     {
                         "clientId": f"client-{int(time.time() * 1000)}",
@@ -100,15 +103,15 @@ class LogStreamingClient:
                     },
                 )
 
-            @self.socket_client.on("registration_ack")
-            async def on_registration_ack(data):
+            @self.socket_client.on("registration_ack")  # type: ignore[misc]
+            async def on_registration_ack(data: Dict[str, Any]) -> None:
                 server_name = data.get("serverName") or self.server_name
                 console.print(f"✓ [green]Registered as server: {server_name}[/green]")
                 self._registration_complete.set()
 
             # Control channel to remotely manage the client from UI/backend
-            @self.socket_client.on("control")
-            async def on_control(data):
+            @self.socket_client.on("control")  # type: ignore[misc]
+            async def on_control(data: Dict[str, Any]) -> None:
                 try:
                     action = str(data.get("action", "")).lower()
                     target_service = data.get("serviceName")
@@ -122,8 +125,8 @@ class LogStreamingClient:
                 except Exception:
                     pass
 
-            @self.socket_client.on("stop_service")
-            async def on_stop_service(data=None):
+            @self.socket_client.on("stop_service")  # type: ignore[misc]
+            async def on_stop_service(data: Optional[Dict[str, Any]] = None) -> None:
                 try:
                     # Optional service targeting support
                     target_service = (
@@ -139,8 +142,8 @@ class LogStreamingClient:
                 except Exception:
                     pass
 
-            @self.socket_client.event
-            async def disconnect():
+            @self.socket_client.event  # type: ignore[misc]
+            async def disconnect() -> None:
                 console.print("[yellow]Disconnected from log server[/yellow]")
 
             # Connect with authentication token
@@ -154,7 +157,7 @@ class LogStreamingClient:
             # Wait for registration acknowledgment
             try:
                 await asyncio.wait_for(self._registration_complete.wait(), timeout=3)
-            except asyncio.TimeoutExpired:
+            except asyncio.TimeoutError:
                 pass
 
             return True
@@ -211,7 +214,7 @@ class LogStreamingClient:
                 module_logger.error(f"Error in log streaming loop: {e}")
                 await asyncio.sleep(1)
 
-    async def _send_log_entry(self, log_entry: Dict) -> None:
+    async def _send_log_entry(self, log_entry: Dict[str, Any]) -> None:
         """Send a single log entry to the server."""
         payload = {
             "level": log_entry.get("level", "INFO"),
@@ -221,13 +224,17 @@ class LogStreamingClient:
             "serverName": self.server_name,
         }
         try:
-            await self.socket_client.emit("log_entry", payload)
+            client = self.socket_client
+            if client is not None:
+                await client.emit("log_entry", payload)
         except Exception:
             pass
 
-    def _collect_resource_data(self, current_time: float, last_network_stats) -> Dict:
+    def _collect_resource_data(
+        self, current_time: float, last_network_stats: Optional[Tuple[float, float, float]]
+    ) -> Dict[str, Any]:
         """Collect current resource usage data."""
-        resource_data = {}
+        resource_data: Dict[str, Any] = {}
 
         if psutil:
             try:
@@ -277,16 +284,18 @@ class LogStreamingClient:
 
         return resource_data
 
-    async def _send_resource_update(self, resource_data: Dict) -> None:
+    async def _send_resource_update(self, resource_data: Dict[str, Any]) -> None:
         """Send resource update to server."""
         try:
-            await self.socket_client.emit(
-                "resource_update",
-                {
-                    "serverName": self.server_name,
-                    "current": resource_data,
-                },
-            )
+            client = self.socket_client
+            if client is not None:
+                await client.emit(
+                    "resource_update",
+                    {
+                        "serverName": self.server_name,
+                        "current": resource_data,
+                    },
+                )
         except Exception:
             pass
 
@@ -296,10 +305,10 @@ class LogStreamingClient:
         self.original_stderr = sys.stderr
 
         sys.stdout = OutputCapture(
-            "stdout", self.original_stdout, self.log_queue, self.echo_enabled
+            "stdout", sys.stdout, self.log_queue, self.echo_enabled
         )
         sys.stderr = OutputCapture(
-            "stderr", self.original_stderr, self.log_queue, self.echo_enabled
+            "stderr", sys.stderr, self.log_queue, self.echo_enabled
         )
 
     def stop_output_capture(self) -> None:
@@ -396,19 +405,19 @@ class LogStreamer:
         self.event_loop: Optional[asyncio.AbstractEventLoop] = None
         self.background_thread: Optional[threading.Thread] = None
 
-    def __enter__(self):
+    def __enter__(self) -> "LogStreamer":
         """Start log streaming."""
         self.start()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """Stop log streaming."""
         self.stop()
 
     def start(self) -> None:
         """Start the log streaming in a background thread."""
 
-        def run_event_loop():
+        def run_event_loop() -> None:
             self.event_loop = asyncio.new_event_loop()
             asyncio.set_event_loop(self.event_loop)
             try:
@@ -466,10 +475,10 @@ class LogStreamer:
             }
         )
 
-    def capture_subprocess_output(self, process: subprocess.Popen) -> None:
+    def capture_subprocess_output(self, process: subprocess.Popen[bytes]) -> None:
         """Capture output from a subprocess."""
 
-        def capture_stream(stream, log_level):
+        def capture_stream(stream: Any, log_level: str) -> None:
             for line in iter(stream.readline, b""):
                 if line:
                     decoded_line = line.decode("utf-8", errors="replace").rstrip("\n")

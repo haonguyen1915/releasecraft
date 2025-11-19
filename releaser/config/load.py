@@ -131,7 +131,9 @@ def _merge_into_config(cfg: AppConfig, data: Dict[str, Any]) -> None:
                 )
             if "max_commits" in rn:
                 try:
-                    cfg.release.auto_gen_notes.max_commits = int(rn.get("max_commits"))
+                    raw_max = rn.get("max_commits")
+                    if raw_max is not None:
+                        cfg.release.auto_gen_notes.max_commits = int(raw_max)
                 except Exception:
                     pass
             if "mode" in rn:
@@ -170,19 +172,25 @@ def _merge_into_config(cfg: AppConfig, data: Dict[str, Any]) -> None:
             cfg.llm.api_key_env = str(llm.get("api_key_env") or cfg.llm.api_key_env)
         if "temperature" in llm:
             try:
-                cfg.llm.temperature = float(llm.get("temperature"))
+                raw_temp = llm.get("temperature")
+                if raw_temp is not None:
+                    cfg.llm.temperature = float(raw_temp)
             except Exception:
                 pass
         if "max_tokens" in llm:
             try:
-                cfg.llm.max_tokens = int(llm.get("max_tokens"))
+                raw_max_tokens = llm.get("max_tokens")
+                if raw_max_tokens is not None:
+                    cfg.llm.max_tokens = int(raw_max_tokens)
             except Exception:
                 pass
         if "include_diff" in llm:
             cfg.llm.include_diff = bool(llm.get("include_diff"))
         if "max_commits" in llm:
             try:
-                cfg.llm.max_commits = int(llm.get("max_commits"))
+                raw_llm_max_commits = llm.get("max_commits")
+                if raw_llm_max_commits is not None:
+                    cfg.llm.max_commits = int(raw_llm_max_commits)
             except Exception:
                 pass
         if "cache" in llm:
@@ -219,7 +227,9 @@ def _merge_into_config(cfg: AppConfig, data: Dict[str, Any]) -> None:
             cfg.commit_lint.scope_pattern = cl.get("scope_pattern") or None
         if "subject_max_length" in cl:
             try:
-                cfg.commit_lint.subject_max_length = int(cl.get("subject_max_length"))
+                raw_subject_max = cl.get("subject_max_length")
+                if raw_subject_max is not None:
+                    cfg.commit_lint.subject_max_length = int(raw_subject_max)
             except Exception:
                 pass
         if "allow_bang" in cl:
@@ -242,7 +252,9 @@ def _merge_into_config(cfg: AppConfig, data: Dict[str, Any]) -> None:
     if cg:
         if "history_commits" in cg:
             try:
-                cfg.commit_gen.history_commits = int(cg.get("history_commits"))
+                raw_history = cg.get("history_commits")
+                if raw_history is not None:
+                    cfg.commit_gen.history_commits = int(raw_history)
             except Exception:
                 pass
         if "demote_feat_if_similar" in cg:

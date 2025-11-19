@@ -8,6 +8,10 @@ tag_prefix = "v"
 # Prefer running native tooling (poetry version / npm version) when available
 use_native = false
 
+[logging]
+# Global Python logging level for ReleaseCraft internals and AI prompts/outputs
+# Allowed: "debug", "info", "warning", "error", "critical"
+level = "debug"
 
 # --- Release Configuration ---
 [release]
@@ -17,6 +21,7 @@ push = true
 version_targets = []
 change_log_file = "CHANGELOG.md"
 allow_dirty = true
+
 
 [release.version]
 strategy = "auto"
@@ -52,7 +57,7 @@ mode = "auto"
 # Advanced LLM configuration for release notes and commit message generation
 enabled = true
 provider = "openai"
-model = "gpt-4o-mini"
+model = "gpt-4o"
 api_key_env = "OPENAI_API_KEY"
 temperature = 0.2
 max_tokens = 2500

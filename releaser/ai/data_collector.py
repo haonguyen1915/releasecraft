@@ -9,13 +9,13 @@ Key features:
 - Token limit awareness to prevent API quota issues
 - Support for conventional commits parsing
 """
-
 from __future__ import annotations
 
 import re
 import subprocess
 from pathlib import Path
 from typing import Any
+from typing import Optional, TypedDict
 
 
 def collect_commits_and_diffs(
@@ -398,7 +398,14 @@ def is_conventional_commit(message: str) -> bool:
     return bool(re.match(pattern, message))
 
 
-def parse_conventional_commit(message: str) -> dict[str, str | None]:
+class ConventionalCommitParts(TypedDict):
+    type: Optional[str]
+    scope: Optional[str]
+    breaking: bool
+    description: str
+
+
+def parse_conventional_commit(message: str) -> ConventionalCommitParts:
     """Parse a conventional commit message into components.
 
     Args:
@@ -422,19 +429,19 @@ def parse_conventional_commit(message: str) -> dict[str, str | None]:
     match = re.match(pattern, message)
 
     if not match:
-        return {
-            "type": None,
-            "scope": None,
-            "breaking": False,
-            "description": message,
-        }
+        return ConventionalCommitParts(
+            type=None,
+            scope=None,
+            breaking=False,
+            description=message,
+        )
 
-    return {
-        "type": match.group("type"),
-        "scope": match.group("scope"),
-        "breaking": match.group("breaking") == "!",
-        "description": match.group("description"),
-    }
+    return ConventionalCommitParts(
+        type=match.group("type"),
+        scope=match.group("scope"),
+        breaking=match.group("breaking") == "!",
+        description=match.group("description"),
+    )
 
 
 def estimate_token_count(text: str) -> int:

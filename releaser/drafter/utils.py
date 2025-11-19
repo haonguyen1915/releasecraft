@@ -25,7 +25,9 @@ def _run_git(
         )
     except Exception as e:
         # Return an object with empty stdout/stderr on failure
-        cp = subprocess.CompletedProcess(["git", *args], returncode=1)
+        cp: subprocess.CompletedProcess[str] = subprocess.CompletedProcess(
+            ["git", *args], returncode=1
+        )
         cp.stdout = ""
         cp.stderr = str(e)
         return cp
@@ -82,7 +84,7 @@ def get_latest_tag(cwd: str = ".") -> str:
     return tags[0] if tags else ""
 
 
-def _semver_key(tag: str, prefix: str = "v"):
+def _semver_key(tag: str, prefix: str = "v") -> tuple[int, int, int, int]:
     # Extract numeric x.y.z from optional prefix
     version = tag
     if prefix and version.startswith(prefix):

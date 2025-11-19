@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 
 from .console import logger, prompt_choice, prompt_confirmation, prompt_input
@@ -48,7 +48,7 @@ def _yes_to_bool(val: Optional[str], default: bool) -> bool:
     return v in ("y", "yes", "true", "1")
 
 
-def run(args) -> int:
+def run(args: Any) -> int:
     # Pre-filled values from flags
     project_type = getattr(args, "project_type", None) or "auto"
     tag_prefix = getattr(args, "tag_prefix", None) or "v"
@@ -200,7 +200,7 @@ def run(args) -> int:
     return 0
 
 
-def _render_full_config(doc: Dict[str, object]) -> str:
+def _render_full_config(doc: Dict[str, Any]) -> str:
     """Render a full TOML config with explanations and examples in new schema format.
 
     We serialize all supported options with inline comments so users
@@ -218,12 +218,12 @@ def _render_full_config(doc: Dict[str, object]) -> str:
 
     project = doc.get("project", {}) or {}
     release = doc.get("release", {}) or {}
-    version_cfg = release.get("version", {}) if isinstance(release, dict) else {}  # type: ignore
-    pre_release = release.get("pre_release", {}) if isinstance(release, dict) else {}  # type: ignore
-    change_log = release.get("change_log", {}) if isinstance(release, dict) else {}  # type: ignore
+    version_cfg = release.get("version", {}) if isinstance(release, dict) else {}
+    pre_release = release.get("pre_release", {}) if isinstance(release, dict) else {}
+    change_log = release.get("change_log", {}) if isinstance(release, dict) else {}
     auto_gen_notes = (
         release.get("auto_gen_notes", {}) if isinstance(release, dict) else {}
-    )  # type: ignore
+    )
     llm = doc.get("llm-config", {}) or {}
     hooks = doc.get("hooks", {}) or {}
     providers = doc.get("provider", {}) or {}

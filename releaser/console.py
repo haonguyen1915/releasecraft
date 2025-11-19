@@ -5,7 +5,7 @@ This module provides a centralized console interface using the rich library
 for better formatting, colors, and visual appeal throughout the releaser package.
 """
 
-from typing import Optional
+from typing import Optional, Any, Dict, List
 
 from rich.console import Console
 from rich.panel import Panel
@@ -23,26 +23,26 @@ error_console = Console(stderr=True)
 class RichLogger:
     """Logger-like interface using rich console for consistent styling."""
 
-    def __init__(self, console_instance: Optional[Console] = None):
+    def __init__(self, console_instance: Optional[Console] = None) -> None:
         self.console = console_instance or console
 
-    def info(self, message: str, **kwargs):
+    def info(self, message: str, **kwargs: Any) -> None:
         """Log info message with blue color."""
         self.console.print(f"ℹ️  {message}", style="blue", **kwargs)
 
-    def success(self, message: str, **kwargs):
+    def success(self, message: str, **kwargs: Any) -> None:
         """Log success message with green color."""
         self.console.print(f"✅ {message}", style="green", **kwargs)
 
-    def warning(self, message: str, **kwargs):
+    def warning(self, message: str, **kwargs: Any) -> None:
         """Log warning message with yellow color."""
         self.console.print(f"⚠️  {message}", style="yellow", **kwargs)
 
-    def error(self, message: str, **kwargs):
+    def error(self, message: str, **kwargs: Any) -> None:
         """Log error message with red color."""
         error_console.print(f"❌ {message}", style="red bold", **kwargs)
 
-    def debug(self, message: str, **kwargs):
+    def debug(self, message: str, **kwargs: Any) -> None:
         """Log debug message with dim style."""
         self.console.print(f"🐛 {message}", style="dim", **kwargs)
 
@@ -50,7 +50,7 @@ class RichLogger:
         """Create highlighted text for important values."""
         return Text(value, style="bright_red bold")
 
-    def print_header(self, title: str, subtitle: Optional[str] = None):
+    def print_header(self, title: str, subtitle: Optional[str] = None) -> None:
         """Print a formatted header."""
         if subtitle:
             header_text = f"[bold]{title}[/bold]\n[dim]{subtitle}[/dim]"
@@ -60,11 +60,11 @@ class RichLogger:
         panel = Panel(header_text, style="blue", padding=(1, 2))
         self.console.print(panel)
 
-    def print_rule(self, title: Optional[str] = None, style: str = "blue"):
+    def print_rule(self, title: Optional[str] = None, style: str = "blue") -> None:
         """Print a horizontal rule with optional title."""
-        self.console.print(Rule(title, style=style))
+        self.console.print(Rule(title or "", style=style))
 
-    def print_status(self, message: str, status: str = "info"):
+    def print_status(self, message: str, status: str = "info") -> None:
         """Print a status message with appropriate styling."""
         styles = {
             "info": "blue",
@@ -83,12 +83,12 @@ class RichLogger:
 class BorderedOutput:
     """Create bordered output similar to the existing table-like displays."""
 
-    def __init__(self, console_instance: Optional[Console] = None):
+    def __init__(self, console_instance: Optional[Console] = None) -> None:
         self.console = console_instance or console
 
     def create_bordered_content(
         self, content: str, title: str = "", dry_run: bool = False
-    ):
+    ) -> None:
         """Create a bordered panel with content."""
         if dry_run:
             header_text = "DRY RUN - " + title if title else "DRY RUN - PREVIEW"
@@ -110,8 +110,8 @@ class BorderedOutput:
     def create_table(
         self,
         title: str = "",
-        headers: Optional[list] = None,
-        rows: Optional[list] = None,
+        headers: Optional[List[str]] = None,
+        rows: Optional[List[List[object]]] = None,
         style: str = "blue",
     ) -> Table:
         """Create a rich table with styling."""
@@ -132,16 +132,16 @@ class BorderedOutput:
     def print_table(
         self,
         title: str = "",
-        headers: Optional[list] = None,
-        rows: Optional[list] = None,
+        headers: Optional[List[str]] = None,
+        rows: Optional[List[List[object]]] = None,
         style: str = "blue",
-    ):
+    ) -> None:
         """Print a formatted table."""
         table = self.create_table(title, headers, rows, style)
         self.console.print(table)
 
 
-def create_duplicate_commits_table(duplicates: dict) -> Table:
+def create_duplicate_commits_table(duplicates: Dict[str, List[List[str]]]) -> Table:
     """Create a table for displaying duplicate commits."""
     table = Table(
         title="⚠️ Duplicate Commit Messages Found",
@@ -180,7 +180,9 @@ def prompt_input(message: str, default: str = "") -> str:
     return Prompt.ask(message, default=default)
 
 
-def prompt_choice(message: str, choices: list, default: Optional[str] = None) -> str:
+def prompt_choice(
+    message: str, choices: List[str], default: Optional[str] = None
+) -> str:
     """Prompt for choice selection with numbered options.
 
     Args:
@@ -216,22 +218,23 @@ def prompt_choice(message: str, choices: list, default: Optional[str] = None) ->
         prompt_text = f"{message} (default: {default})"
 
     # Prompt for input
-    response = Prompt.ask(
+    default_arg = default_display or ""
+    response: str = Prompt.ask(
         prompt_text,
         choices=valid_inputs,
-        default=default_display,
+        default=default_arg,
         show_choices=False,  # We already showed them above
     )
 
     # Convert number input to choice text
     if response in number_to_choice:
-        return number_to_choice[response]
+        return str(number_to_choice[response])
 
     # If they typed the full text, return as-is
-    return response
+    return str(response)
 
 
-def print_version_header():
+def print_version_header() -> None:
     """Print the version header with rich formatting."""
     try:
         import pyfiglet
@@ -242,7 +245,7 @@ def print_version_header():
         console.print("🚀 [bold bright_blue]Releaser[/bold bright_blue]")
 
 
-def create_progress_spinner(description: str = "Processing..."):
+def create_progress_spinner(description: str = "Processing...") -> Progress:
     """Create a progress spinner for long-running operations."""
     return Progress(
         SpinnerColumn(),
@@ -258,22 +261,22 @@ bordered = BorderedOutput()
 
 
 # Compatibility functions for easy migration
-def log_info(message: str, **kwargs):
+def log_info(message: str, **kwargs: Any) -> None:
     """Compatibility function for log_info."""
     logger.info(message, **kwargs)
 
 
-def log_success(message: str, **kwargs):
+def log_success(message: str, **kwargs: Any) -> None:
     """Compatibility function for log_success."""
     logger.success(message, **kwargs)
 
 
-def log_warning(message: str, **kwargs):
+def log_warning(message: str, **kwargs: Any) -> None:
     """Compatibility function for log_warning."""
     logger.warning(message, **kwargs)
 
 
-def log_error(message: str, **kwargs):
+def log_error(message: str, **kwargs: Any) -> None:
     """Compatibility function for log_error."""
     logger.error(message, **kwargs)
 
@@ -283,11 +286,11 @@ def highlight_value(value: str) -> Text:
     return logger.highlight_value(value)
 
 
-def print_rule(title: Optional[str] = None, style: str = "blue"):
+def print_rule(title: Optional[str] = None, style: str = "blue") -> None:
     """Compatibility function for print_rule."""
     logger.print_rule(title, style)
 
 
-def print_status(message: str, status: str = "info"):
+def print_status(message: str, status: str = "info") -> None:
     """Compatibility function for print_status."""
     logger.print_status(message, status)

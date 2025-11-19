@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Any
 
 
 @dataclass
@@ -21,7 +22,7 @@ class AiConfig:
     fail_on_error: bool = False
 
     @staticmethod
-    def from_app_config(cfg) -> "AiConfig":
+    def from_app_config(cfg: Any) -> "AiConfig":
         """Build AiConfig from AppConfig by combining LLM and auto_gen_notes settings.
 
         LLM settings come from cfg.llm:

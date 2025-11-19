@@ -16,7 +16,7 @@ import socketserver
 import subprocess
 import sys
 import threading
-from typing import Callable, Dict, Optional
+from typing import Callable, Dict, Optional, Any
 
 from ..console import console, error_console, logger
 
@@ -37,20 +37,20 @@ class PublicTunnelService:
     def __init__(
         self,
         port: int,
-        log_callback: Optional[Callable] = None,
+        log_callback: Optional[Callable[[str, str], None]] = None,
         tunnel_enabled: bool = False,
         tunnel_host: str = "bore.pub",
         bore_executable: str = "bore",
         tunnel_secret: Optional[str] = None,
-        stdout=None,
-        stderr=None,
+        stdout: Any = None,
+        stderr: Any = None,
         start_http_server: bool = True,
-        tunnel_info_callback: Optional[Callable] = None,
+        tunnel_info_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
         enable_port_forward: bool = False,
         k8s_namespace: Optional[str] = None,
         k8s_pod: Optional[str] = None,
         remote_port: Optional[int] = None,
-    ):
+    ) -> None:
         self.port = port
         self.log_callback = log_callback
         self.tunnel_enabled = tunnel_enabled
@@ -71,7 +71,7 @@ class PublicTunnelService:
         self._bore_process: Optional[subprocess.Popen] = None
         self._port_forward_process: Optional[subprocess.Popen] = None
 
-    def _create_request_handler(self):
+    def _create_request_handler(self) -> Callable[..., http.server.BaseHTTPRequestHandler]:
         """Create HTTP request handler class."""
         log_callback = self.log_callback
         _stdout = self.stdout
@@ -122,7 +122,7 @@ class PublicTunnelService:
                 else:
                     self._send_json_response(404, {"error": "endpoint not found"})
 
-            def log_message(self, format_str, *args):
+            def log_message(self, format_str: str, *args: Any) -> None:
                 try:
                     console.print(f"[green]\\[http][/green] {format_str % args}")
                 except Exception:
@@ -139,12 +139,13 @@ class PublicTunnelService:
                     ("0.0.0.0", self.port), self._create_request_handler()
                 )
 
-                def serve_http():
+                def serve_http() -> None:
                     console.print(
                         f"✓ [green]HTTP log service running on http://127.0.0.1:{self.port}[/green]"
                     )
                     console.print("[green]   Endpoints: GET /health, POST /log[/green]")
-                    self._http_server.serve_forever(poll_interval=0.5)
+                    if self._http_server:
+                        self._http_server.serve_forever(poll_interval=0.5)
 
                 self._http_thread = threading.Thread(target=serve_http, daemon=True)
                 self._http_thread.start()
@@ -212,7 +213,7 @@ class PublicTunnelService:
                 bufsize=1,
             )
 
-            def monitor_pf_output():
+            def monitor_pf_output() -> None:
                 if (
                     not self._port_forward_process
                     or not self._port_forward_process.stdout
@@ -251,7 +252,7 @@ class PublicTunnelService:
                 bufsize=1,
             )
 
-            def monitor_bore_output():
+            def monitor_bore_output() -> None:
                 if not self._bore_process or not self._bore_process.stdout:
                     return
 
@@ -273,7 +274,7 @@ class PublicTunnelService:
     def _parse_tunnel_info(self, output_line: str) -> None:
         """Parse tunnel information from Bore output."""
         try:
-            tunnel_info = None
+            tunnel_info: Optional[Dict[str, Any]] = None
 
             # Look for direct URL in output
             url_match = re.search(r"(https?://\S+)", output_line)

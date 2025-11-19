@@ -16,7 +16,7 @@ import subprocess
 import sys
 import time
 from datetime import datetime
-from typing import Dict, Optional, Callable
+from typing import Dict, Optional, Callable, Any
 
 from ..console import console, logger
 from .streaming import LogStreamingClient, LogStreamer
@@ -155,7 +155,7 @@ def run_interactive_mode(args: argparse.Namespace) -> None:
             return
 
     # Set up signal handler for graceful shutdown
-    def signal_handler(signum, frame):
+    def signal_handler(signum: int, frame: Any) -> None:
         console.print("\n[yellow]Stopping log client...[/yellow]")
         client.stop()
         sys.exit(0)
@@ -242,7 +242,7 @@ def run_command_mode(args: argparse.Namespace) -> None:
 
 
 def _setup_tunnel_service(
-    args: argparse.Namespace, client_or_streamer
+    args: argparse.Namespace, client_or_streamer: Any
 ) -> Optional[PublicTunnelService]:
     """Set up public tunnel service with log callback."""
     log_callback_fn: Optional[Callable[[str, str], None]] = None
@@ -275,7 +275,7 @@ def _setup_tunnel_service(
                 )
 
     # Set up tunnel info callback
-    def tunnel_info_callback(tunnel_info: Dict) -> None:
+    def tunnel_info_callback(tunnel_info: Dict[str, Any]) -> None:
         try:
             # Add service/server info for UI mapping
             enriched_info = dict(tunnel_info)

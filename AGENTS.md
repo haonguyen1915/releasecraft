@@ -6,10 +6,10 @@
 - Build and coverage artifacts (`build/`, `dist/`, `htmlcov/`, `releasecraft.egg-info/`) are generated; do not edit them by hand.
 
 ## Build, Test & Development Commands
-- `make install` – install dependencies with Poetry (including dev tools).
-- `make test` – run the pytest suite with coverage.
-- `make lint` – run lockfile check, ruff/flake8, pylint and mypy on `releaser/`.
-- `make fix` / `make format` – auto-fix style via ruff and format code.
+- `conda run -n py10 make install` – install dependencies with Poetry (including dev tools).
+- `conda run -n py10 make test` – run the pytest suite with coverage.
+- `conda run -n py10 make lint` – run lockfile check, ruff/flake8, pylint and mypy on `releaser/`.
+- `conda run -n py10 make fix` / `conda run -n py10 make format` – auto-fix style via ruff and format code.
 - Run the CLI via `poetry run releaser ...` or `poetry run release-drafter ...`.
 
 ## Coding Style & Naming
@@ -27,6 +27,7 @@
 - Keep commits focused and descriptive in the imperative mood (e.g. `fix: handle empty changelog`).
 - PRs should include: a short summary, motivation/context, key changes, how to run relevant commands, and any notable CLI output or screenshots.
 
-## Agent-Specific Notes
-- Prefer modifying `releaser/` and `tests/`; avoid touching generated artifacts.
-- When updating behavior, also update or add tests to keep coverage meaningful.
+## Agent-Specific Guidance
+- Treat this file as authoritative for tooling paths.
+- If a command fails due to environment differences, re-run with the explicit py10 interpreter or `conda run -n py10 ...`.
+- Avoid creating Poetry virtualenvs; the project is configured to use the active conda env.

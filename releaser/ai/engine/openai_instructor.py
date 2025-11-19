@@ -91,7 +91,7 @@ def generate_structured(
     )
 
     # In normal operation, `result` is already an instance of `response_model`.
-    if isinstance(result, response_model):  # type: ignore[arg-type]
+    if isinstance(result, response_model):
         return result
 
     # Fallback: attempt to construct model from mapping-like response.
@@ -106,7 +106,7 @@ def generate_structured(
         return response_model(**{"summary": str(result)})
     except Exception:
         try:
-            return response_model()  # type: ignore[call-arg]
+            return response_model()
         except Exception as exc:
             raise TypeError(
                 "Could not parse structured response into the response_model"
@@ -184,7 +184,7 @@ def _render_template(template_str: str, **context: Any) -> str:
     """
     jinja2 = _import_jinja2()
     template = jinja2.Template(template_str)
-    return template.render(**context)
+    return str(template.render(**context))
 
 
 def _infer_cc_from_heuristics(
@@ -200,7 +200,9 @@ def _infer_cc_from_heuristics(
     lowered = [f.lower() for f in files]
 
     # Type heuristics
-    def only(exts=None, prefixes=None):
+    def only(
+        exts: Optional[list[str]] = None, prefixes: Optional[list[str]] = None
+    ) -> bool:
         exts = exts or []
         prefixes = prefixes or []
         return all(
@@ -469,25 +471,24 @@ def generate_release_notes(
         summary = (
             f"Release notes draft for {current_version} (prev: {previous_version})"
         )
-        rn = _RNFallback(
+        return _RNFallback(
             summary=summary,
             highlights=highlights,
             sections=[],
             breaking_changes=[],
             limitations=[],
         )
-        return rn
 
     # Determine effective options (include_diff, max_commits, always_diff_types)
     if include_diff is None or max_commits is None or always_diff_types is None:
         try:
-            from releaser.config.load import load_config  # type: ignore
-            from releaser.ai.config import AiConfig  # type: ignore
+            from releaser.config.load import load_config
+            from releaser.ai.config import AiConfig
 
             _cfg = load_config()
             _ai = AiConfig.from_app_config(_cfg)
         except Exception:
-            _ai = None  # type: ignore
+            _ai = None
         if include_diff is None:
             include_diff = bool(getattr(_ai, "include_diff", True)) if diffs else False
         if max_commits is None:
@@ -557,7 +558,7 @@ def generate_release_notes(
     try:
         log.debug("AI system prompt for release notes:\n%s", system_template)
         log.debug("AI user prompt for release notes:\n%s", user_prompt)
-        rn = generate_structured(
+        rn: ReleaseNotes = generate_structured(
             api_key=api_key,
             model=model,
             temperature=temperature,
@@ -580,11 +581,10 @@ def generate_release_notes(
         summary = (
             f"Release notes draft for {current_version} (prev: {previous_version})"
         )
-        rn = _RNFallback(
+        return _RNFallback(
             summary=summary,
             highlights=highlights,
             sections=[],
             breaking_changes=[],
             limitations=[],
         )
-        return rn

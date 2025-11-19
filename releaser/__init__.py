@@ -36,7 +36,7 @@ except ImportError:
 
 
 # Lazy import to avoid circular dependencies
-def cli_main():
+def cli_main() -> int:
     """Entrypoint for the `releaser` console script."""
     from .cli import main
 

@@ -6,8 +6,8 @@ from collections.abc import Iterable
 from typing import Optional
 
 try:  # Optional dependency for colored output
-    from colorama import Fore, Style  # type: ignore[import-untyped]
-    from colorama import init as colorama_init  # type: ignore[import-untyped]
+    from colorama import Fore, Style
+    from colorama import init as colorama_init
 
     colorama_init(autoreset=True)
 except Exception:  # pragma: no cover - graceful degradation
@@ -76,6 +76,7 @@ def __logger_setup(  # noqa: D401 - simple setup function
 
     default_loggers = [
         "root",
+        "openai",
         "urllib3",
         "httpcore",
         "aiokafka",
@@ -86,6 +87,7 @@ def __logger_setup(  # noqa: D401 - simple setup function
         "LiteLLM",
         "instructor",
     ]
+    include_set = set(include or [])
     if include:
         default_loggers.extend(list(include))
 
@@ -93,7 +95,10 @@ def __logger_setup(  # noqa: D401 - simple setup function
         logger = logging.getLogger(name if name != "root" else "")
         logger.handlers.clear()
         logger.addHandler(handler)
-        logger.setLevel(resolved_level if name == "root" else logging.WARNING)
+        if name == "root" or name in include_set:
+            logger.setLevel(resolved_level)
+        else:
+            logger.setLevel(logging.WARNING)
 
 
 def logger_setup(**kwargs: Optional[str | int | Iterable[str]]) -> None:
@@ -102,4 +107,3 @@ def logger_setup(**kwargs: Optional[str | int | Iterable[str]]) -> None:
 
 
 __all__ = ["ColorFormatter", "__logger_setup", "logger_setup"]
-

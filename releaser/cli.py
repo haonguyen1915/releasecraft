@@ -6,6 +6,8 @@ import sys
 from typing import Optional
 
 from .console import console, logger, print_version_header
+from .config.load import load_config
+from .logging_setup import logger_setup
 
 
 def add_bump_arguments(parser: argparse.ArgumentParser) -> None:
@@ -366,6 +368,14 @@ def main(argv: Optional[list[str]] = None) -> int:
             args = parser.parse_args(argv)
         except SystemExit:
             return 1
+
+        # Configure Python logging based on config before handling commands
+        try:
+            cfg = load_config(getattr(args, "config", None))
+            logger_setup(level=getattr(cfg.logging, "level", "warning"), include=["releaser"])
+        except Exception:
+            # Fallback to a sane default if config loading fails
+            logger_setup(level="warning", include=["releaser"])
 
         if not getattr(args, "command", None):
             parser.print_help()

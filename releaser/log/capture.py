@@ -15,7 +15,7 @@ import shutil
 import subprocess
 import threading
 from datetime import datetime
-from typing import List, Optional
+from typing import IO, List, Optional
 
 from ..console import console, error_console
 
@@ -30,7 +30,7 @@ class OutputCapture:
     def __init__(
         self,
         stream_name: str,
-        original_stream,
+        original_stream: IO[str],
         log_queue: queue.Queue,
         echo_enabled: bool = True,
     ):
@@ -74,7 +74,7 @@ class OutputCapture:
 class KubernetesLogCapture:
     """Captures kubectl logs and forwards to a queue."""
 
-    def __init__(self, log_queue: queue.Queue, echo_enabled: bool = True):
+    def __init__(self, log_queue: queue.Queue, echo_enabled: bool = True) -> None:
         self.log_queue = log_queue
         self.echo_enabled = echo_enabled
         self.is_running = False
@@ -216,7 +216,9 @@ class KubernetesLogCapture:
             if namespace:
                 cmd.extend(["--namespace", namespace])
 
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+            result = subprocess.run(
+                cmd, capture_output=True, text=True, timeout=30
+            )
 
             if result.returncode == 0:
                 return [pod.strip() for pod in result.stdout.split("\n") if pod.strip()]

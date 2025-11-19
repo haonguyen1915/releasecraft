@@ -9,7 +9,7 @@ description = "A CLI tool for generating releases and changelogs, and streaming 
 readme = "README.md"
 classifiers = [ "Development Status :: 3 - Alpha", "Intended Audience :: Developers", "License :: OSI Approved :: MIT License", "Programming Language :: Python :: 3", "Programming Language :: Python :: 3.9", "Programming Language :: Python :: 3.10", "Programming Language :: Python :: 3.11", "Programming Language :: Python :: 3.12",]
 requires-python = ">=3.9,<4.0"
-dependencies = [ "click>=8.0.0", "requests>=2.25.0", "PyYAML>=5.4.0", "GitPython>=3.1.0", "tabulate>=0.8.7", "packaging>=20.0", "pyfiglet==1.0.3", "matplotlib>=3.3.0", "python-socketio==5.13.0", "toml>=0.10.2,<0.11.0", "instructor (>=1.13.0,<2.0.0)",]
+dependencies = [ "click>=8.0.0", "requests>=2.25.0", "PyYAML>=5.4.0", "GitPython>=3.1.0", "tabulate>=0.8.7", "packaging>=20.0", "pyfiglet==1.0.3", "matplotlib>=3.3.0", "python-socketio==5.13.0", "toml>=0.10.2,<0.11.0", "instructor (>=1.13.0,<2.0.0)", "colorama (>=0.4.6,<0.5.0)"]
 [[project.authors]]
 name = "haonguyen"
 email = "vanhao1915@gmail.com"
@@ -31,7 +31,7 @@ include = "\\.pyi?$"
 extend-exclude = "/(\n  # directories\n  \\.eggs\n  | \\.git\n  | \\.hg\n  | \\.mypy_cache\n  | \\.tox\n  | \\.venv\n  | build\n  | dist\n)/\n"
 
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.10"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
@@ -47,6 +47,14 @@ strict_equality = true
 [[tool.mypy.overrides]]
 module = [ "tests.*",]
 disallow_untyped_defs = false
+
+[[tool.mypy.overrides]]
+module = [ "colorama.*",]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = [ "mcp.*",]
+ignore_errors = true
 
 [tool.flake8]
 max-line-length = 100

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 
 @dataclass
@@ -159,9 +159,9 @@ class ProviderConfig:
     """Provider-specific configuration."""
 
     # Can be extended for different providers
-    poetry: Dict[str, any] = field(default_factory=dict)
-    npm: Dict[str, any] = field(default_factory=dict)
-    setuptools: Dict[str, any] = field(default_factory=dict)
+    poetry: Dict[str, Any] = field(default_factory=dict)
+    npm: Dict[str, Any] = field(default_factory=dict)
+    setuptools: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -190,11 +190,11 @@ class AppConfig:
 
     # Backward compatibility properties (deprecated)
     @property
-    def defaults(self):
+    def defaults(self) -> Any:
         """Deprecated: Use release.create_commit, release.create_tag, release.push instead."""
 
         class _Defaults:
-            def __init__(self, release):
+            def __init__(self, release: ReleaseConfig) -> None:
                 self.commit = release.create_commit
                 self.tag = release.create_tag
                 self.push = release.push
@@ -202,31 +202,31 @@ class AppConfig:
         return _Defaults(self.release)
 
     @property
-    def ai(self):
+    def ai(self) -> LlmConfig:
         """Deprecated: Use llm instead."""
         return self.llm
 
     @property
-    def changelog(self):
+    def changelog(self) -> ChangeLogConfig:
         """Deprecated: Use release.change_log instead."""
         return self.release.change_log
 
     @property
-    def pre_release(self):
+    def pre_release(self) -> PreReleaseConfig:
         """Deprecated: Use release.pre_release instead."""
         return self.release.pre_release
 
     @property
-    def files(self):
+    def files(self) -> List[str]:
         """Deprecated: Use release.version_targets instead."""
         return self.release.version_targets
 
     @property
-    def safety(self):
+    def safety(self) -> Any:
         """Deprecated: Use release.allow_dirty instead."""
 
         class _Safety:
-            def __init__(self, release):
+            def __init__(self, release: ReleaseConfig) -> None:
                 self.allow_dirty = release.allow_dirty
 
         return _Safety(self.release)
