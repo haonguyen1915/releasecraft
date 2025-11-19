@@ -21,6 +21,9 @@ def _merge_into_config(cfg: AppConfig, data: Dict[str, Any]) -> None:
         cfg.project.tag_prefix = str(project.get("tag_prefix", cfg.project.tag_prefix))
         if "use_native" in project:
             cfg.project.use_native = bool(project.get("use_native"))
+        # Back-compat: allow version_targets under [project]
+        if "version_targets" in project:
+            cfg.release.version_targets = list(project.get("version_targets") or [])
 
     # [release] section
     rel = data.get("release", {}) or {}
@@ -83,6 +86,25 @@ def _merge_into_config(cfg: AppConfig, data: Dict[str, Any]) -> None:
                 cfg.release.pre_release.block = list(rpre.get("block") or [])
 
         # [release.change_log] subsection
+
+        # Back-compat: top-level [pre_release] maps to release.pre_release
+        pre_top = data.get("pre_release", {}) or {}
+        if pre_top:
+            if "enabled" in pre_top:
+                cfg.release.pre_release.enabled = bool(pre_top.get("enabled"))
+            if "default_channel" in pre_top:
+                cfg.release.pre_release.default_channel = str(
+                    pre_top.get("default_channel") or cfg.release.pre_release.default_channel
+                )
+            if "auto_increment" in pre_top:
+                cfg.release.pre_release.auto_increment = bool(pre_top.get("auto_increment"))
+            if "reset_on_bump" in pre_top:
+                cfg.release.pre_release.reset_on_bump = bool(pre_top.get("reset_on_bump"))
+            if "apply" in pre_top:
+                cfg.release.pre_release.apply = list(pre_top.get("apply") or [])
+            if "block" in pre_top:
+                cfg.release.pre_release.block = list(pre_top.get("block") or [])
+
         rcl = rel.get("change_log", {}) or {}
         if rcl:
             if "enabled" in rcl:
@@ -117,8 +139,26 @@ def _merge_into_config(cfg: AppConfig, data: Dict[str, Any]) -> None:
                     rn.get("mode") or cfg.release.auto_gen_notes.mode
                 )
 
+    # Back-compat: top-level [pre_release] maps to release.pre_release (applies regardless of [release])
+    pre_top = data.get("pre_release", {}) or {}
+    if pre_top:
+        if "enabled" in pre_top:
+            cfg.release.pre_release.enabled = bool(pre_top.get("enabled"))
+        if "default_channel" in pre_top:
+            cfg.release.pre_release.default_channel = str(
+                pre_top.get("default_channel") or cfg.release.pre_release.default_channel
+            )
+        if "auto_increment" in pre_top:
+            cfg.release.pre_release.auto_increment = bool(pre_top.get("auto_increment"))
+        if "reset_on_bump" in pre_top:
+            cfg.release.pre_release.reset_on_bump = bool(pre_top.get("reset_on_bump"))
+        if "apply" in pre_top:
+            cfg.release.pre_release.apply = list(pre_top.get("apply") or [])
+        if "block" in pre_top:
+            cfg.release.pre_release.block = list(pre_top.get("block") or [])
+
     # [llm] or [llm-config] section
-    llm = data.get("llm", {}) or data.get("llm-config", {}) or {}
+    llm = data.get("llm", {}) or data.get("llm-config", {}) or data.get("ai", {}) or {}
     if llm:
         if "enabled" in llm:
             cfg.llm.enabled = bool(llm.get("enabled"))
@@ -136,6 +176,13 @@ def _merge_into_config(cfg: AppConfig, data: Dict[str, Any]) -> None:
         if "max_tokens" in llm:
             try:
                 cfg.llm.max_tokens = int(llm.get("max_tokens"))
+            except Exception:
+                pass
+        if "include_diff" in llm:
+            cfg.llm.include_diff = bool(llm.get("include_diff"))
+        if "max_commits" in llm:
+            try:
+                cfg.llm.max_commits = int(llm.get("max_commits"))
             except Exception:
                 pass
         if "cache" in llm:

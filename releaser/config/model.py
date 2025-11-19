@@ -86,6 +86,9 @@ class LlmConfig:
     api_key_env: str = "OPENAI_API_KEY"
     temperature: float = 0.2
     max_tokens: int = 2500
+    # Additional behavior controls for AI-generated notes
+    include_diff: bool = True
+    max_commits: int = 200
     cache: bool = True
     accept_automatically: bool = False
     fail_on_error: bool = False

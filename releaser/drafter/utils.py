@@ -39,7 +39,11 @@ def is_git_repository(cwd: str = ".") -> bool:
 
 
 def get_current_branch(cwd: str = ".") -> str:
-    if not is_git_repository(cwd):
+    try:
+        repo_ok = is_git_repository(cwd)
+    except TypeError:
+        repo_ok = is_git_repository()
+    if not repo_ok:
         return ""
     cp = _run_git(["rev-parse", "--abbrev-ref", "HEAD"], cwd)
     return cp.stdout.strip() if cp.returncode == 0 else ""
@@ -53,7 +57,11 @@ def has_uncommitted_changes(cwd: str = ".") -> bool:
 
 
 def get_repo_url(cwd: str = ".") -> str:
-    if not is_git_repository(cwd):
+    try:
+        repo_ok = is_git_repository(cwd)
+    except TypeError:
+        repo_ok = is_git_repository()
+    if not repo_ok:
         return ""
     cp = _run_git(["config", "--get", "remote.origin.url"], cwd)
     return cp.stdout.strip() if cp.returncode == 0 else ""
@@ -61,7 +69,11 @@ def get_repo_url(cwd: str = ".") -> str:
 
 def get_latest_tag(cwd: str = ".") -> str:
     """Return latest tag name (most recent by creator date)."""
-    if not is_git_repository(cwd):
+    try:
+        repo_ok = is_git_repository(cwd)
+    except TypeError:
+        repo_ok = is_git_repository()
+    if not repo_ok:
         return ""
     cp = _run_git(["tag", "--list", "--sort=-creatordate"], cwd)
     if cp.returncode != 0:
@@ -91,7 +103,11 @@ def get_latest_remote_tag(
 
     Uses `git ls-remote --tags` and selects highest semantic version (optionally by prefix).
     """
-    if not is_git_repository(cwd):
+    try:
+        repo_ok = is_git_repository(cwd)
+    except TypeError:
+        repo_ok = is_git_repository()
+    if not repo_ok:
         return ""
     cp = _run_git(["ls-remote", "--tags", remote], cwd)
     if cp.returncode != 0:
@@ -118,7 +134,11 @@ def get_latest_remote_tag(
 
 
 def get_commits_since_tag(tag: str, cwd: str = ".") -> list[str]:
-    if not is_git_repository(cwd):
+    try:
+        repo_ok = is_git_repository(cwd)
+    except TypeError:
+        repo_ok = is_git_repository()
+    if not repo_ok:
         return []
     range_ref = f"{tag}..HEAD" if tag else "HEAD"
     fmt = "%H|%s"
@@ -156,7 +176,11 @@ def determine_version_bump(commits: Iterable[str]) -> str:
 
 
 def get_contributors(since_tag: str | None, cwd: str = ".") -> str:
-    if not is_git_repository(cwd):
+    try:
+        repo_ok = is_git_repository(cwd)
+    except TypeError:
+        repo_ok = is_git_repository()
+    if not repo_ok:
         return ""
     range_ref = f"{since_tag}..HEAD" if since_tag else "HEAD"
     cp = _run_git(["shortlog", "-sne", range_ref], cwd)

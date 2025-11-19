@@ -21,6 +21,10 @@ def current_branch() -> str:
 
 def check_bump_allowed(cfg: AppConfig) -> Tuple[bool, Optional[str]]:
     branch = current_branch()
+    # If we cannot determine a branch (e.g., not a git repo),
+    # allow pre-release when globally enabled to keep local workflows simple.
+    if not branch:
+        return True, None
     # Block has priority
     if cfg.bump_rules.block and _match_any(branch, cfg.bump_rules.block):
         return False, f"Bump is disabled on branch '{branch}' by bump_rules.block rule"
@@ -43,6 +47,10 @@ def check_prerelease_allowed(cfg: AppConfig) -> Tuple[bool, Optional[str], str]:
         )
 
     branch = current_branch()
+    # If we cannot determine a branch (e.g., not a git repo),
+    # allow pre-release when globally enabled to keep local workflows simple.
+    if not branch:
+        return True, None
     if cfg.release.pre_release.block and _match_any(
         branch, cfg.release.pre_release.block
     ):
