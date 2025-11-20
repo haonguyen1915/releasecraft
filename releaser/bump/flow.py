@@ -1,30 +1,34 @@
 from __future__ import annotations
 
-import datetime
-import subprocess
 import configparser
+import datetime
+import os
 import re
-from pathlib import Path
+import subprocess
 import unicodedata
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Optional, Tuple
+from urllib.parse import urlparse
 
+import requests
+
+from releaser.ai.generator import generate_release_notes_with_fallback
+from releaser.bump import providers
+from releaser.bump.notes import normalize_notes, read_notes_from_editor
+from releaser.bump.rules import check_bump_allowed, check_prerelease_allowed
+from releaser.bump.semver import apply_prerelease, bump_base, finalize, parse
+from releaser.config.load import load_config
+from releaser.config.model import AppConfig
 from releaser.console import (
+    bordered,
     console,
     logger,
-    bordered,
     prompt_choice,
     prompt_confirmation,
     prompt_input,
 )
-from releaser.config.load import load_config
-from releaser.config.model import AppConfig
-from releaser.bump import providers
-from releaser.bump.semver import apply_prerelease, bump_base, finalize, parse
-from releaser.bump.rules import check_bump_allowed, check_prerelease_allowed
-from releaser.bump.notes import normalize_notes, read_notes_from_editor
 from releaser.drafter import utils as git_utils
-from releaser.ai.generator import generate_release_notes_with_fallback
 
 
 @dataclass
@@ -42,6 +46,8 @@ class BumpArgs:
     notes_file: Optional[str] = None
     changelog: bool = False
     changelog_file: Optional[str] = None
+    gitlab_release: bool = False
+    github_draft_release: bool = False
 
 
 class _Exit(Exception):
@@ -117,6 +123,168 @@ def _git_commit_tag_push(
             if do_tag:
                 # Push only the newly created tag explicitly
                 subprocess.run(["git", "push", remote, tag_name], check=True)
+
+
+def _parse_repo_slug(repo_url: str) -> Optional[str]:
+    """Extract the \"owner/repo\" or \"group/project\" slug from a git remote URL.
+
+    Supports SSH and HTTPS remotes, with or without .git suffix.
+    """
+    if not repo_url:
+        return None
+    url = repo_url.strip()
+    if url.endswith(".git"):
+        url = url[: -len(".git")]
+
+    # git@host:owner/repo or ssh://git@host/owner/repo
+    if url.startswith("git@"):
+        try:
+            _user_host, path = url.split(":", 1)
+            return path.strip("/")
+        except ValueError:
+            return None
+    if url.startswith("ssh://"):
+        try:
+            parsed = urlparse(url)
+            path = parsed.path or ""
+            return path.lstrip("/") or None
+        except Exception:
+            return None
+
+    # http(s)://host/owner/repo
+    try:
+        parsed = urlparse(url)
+        path = parsed.path or ""
+        return path.lstrip("/") or None
+    except Exception:
+        return None
+
+
+def _create_github_draft_release(tag_name: str, body: str) -> None:
+    """Create a GitHub draft Release for the given tag, best-effort."""
+    repo_url = git_utils.get_repo_url()
+    if not repo_url:
+        logger.warning(
+            "Cannot create GitHub draft Release: no git remote URL detected."
+        )
+        return
+
+    slug = _parse_repo_slug(repo_url)
+    if not slug:
+        logger.warning(
+            f"Cannot create GitHub draft Release: could not parse repository from URL '{repo_url}'."
+        )
+        return
+
+    parsed = urlparse(repo_url.replace(":", "/"))
+    host = (parsed.hostname or "").lower()
+    if "github" not in host and "GITHUB_API_URL" not in os.environ:
+        logger.warning(
+            "Remote does not look like GitHub and GITHUB_API_URL is not set; "
+            "skipping GitHub draft Release."
+        )
+        return
+
+    parts = slug.split("/")
+    if len(parts) < 2:
+        logger.warning(
+            f"Cannot create GitHub draft Release: unexpected repository slug '{slug}'."
+        )
+        return
+    owner, repo = parts[0], parts[1]
+
+    api_base = os.environ.get("GITHUB_API_URL", "https://api.github.com").rstrip("/")
+    token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
+    if not token:
+        logger.warning(
+            "GITHUB_TOKEN or GH_TOKEN not set; skipping GitHub draft Release creation."
+        )
+        return
+
+    url = f"{api_base}/repos/{owner}/{repo}/releases"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json",
+    }
+    payload = {
+        "tag_name": tag_name,
+        "name": tag_name,
+        "body": body or "",
+        "draft": True,
+        # Mark as pre-release when version contains a hyphen (e.g. 1.0.0-rc.1)
+        "prerelease": "-" in tag_name,
+    }
+
+    try:
+        resp = requests.post(url, headers=headers, json=payload, timeout=10)
+    except Exception as exc:
+        logger.error(f"Error while creating GitHub draft Release: {exc}")
+        return
+
+    if resp.status_code >= 400:
+        logger.error(
+            f"Failed to create GitHub draft Release "
+            f"({resp.status_code}): {resp.text.strip()}"
+        )
+    else:
+        logger.info("Created GitHub draft Release successfully.")
+
+
+def _create_gitlab_release(tag_name: str, body: str) -> None:
+    """Create a GitLab Release for the given tag, best-effort."""
+    repo_url = git_utils.get_repo_url()
+    if not repo_url:
+        logger.warning("Cannot create GitLab Release: no git remote URL detected.")
+        return
+
+    slug = _parse_repo_slug(repo_url)
+    if not slug:
+        logger.warning(
+            f"Cannot create GitLab Release: could not parse project from URL '{repo_url}'."
+        )
+        return
+
+    parsed = urlparse(repo_url.replace(":", "/"))
+    host = (parsed.hostname or "").lower()
+    if "gitlab" not in host and "GITLAB_API_URL" not in os.environ:
+        logger.warning(
+            "Remote does not look like GitLab and GITLAB_API_URL is not set; "
+            "skipping GitLab Release."
+        )
+        return
+
+    api_base = os.environ.get("GITLAB_API_URL", "https://gitlab.com/api/v4").rstrip(
+        "/"
+    )
+    token = os.environ.get("GITLAB_TOKEN") or os.environ.get("CI_JOB_TOKEN")
+    if not token:
+        logger.warning(
+            "GITLAB_TOKEN or CI_JOB_TOKEN not set; skipping GitLab Release creation."
+        )
+        return
+
+    project_id = requests.utils.quote(slug, safe="")
+    url = f"{api_base}/projects/{project_id}/releases"
+    headers = {"PRIVATE-TOKEN": token}
+    payload = {
+        "name": tag_name,
+        "tag_name": tag_name,
+        "description": body or "",
+    }
+
+    try:
+        resp = requests.post(url, headers=headers, json=payload, timeout=10)
+    except Exception as exc:
+        logger.error(f"Error while creating GitLab Release: {exc}")
+        return
+
+    if resp.status_code >= 400:
+        logger.error(
+            f"Failed to create GitLab Release ({resp.status_code}): "
+            f"{resp.text.strip()}"
+        )
+    else:
+        logger.info("Created GitLab Release successfully.")
 
 
 def _read_notes_from_flags(notes: Optional[str], notes_file: Optional[str]) -> str:
@@ -491,9 +659,21 @@ def _run_impl(args: Any) -> int:
 
     # Show plan
     logger.info(f"Target version: {tag_prefix}{target_version}")
+    logger.info(f"Tag to be created: {tag_name}")
+
+    if dry_run:
+        console.print("[DRY-RUN PREVIEW]")
+
     if notes_text:
-        logger.info("Release notes: (will be added to commit and tag)")
-        console.print(notes_text)
+        if dry_run:
+            bordered.create_bordered_content(
+                notes_text,
+                title="RELEASE NOTES PREVIEW",
+                dry_run=True,
+            )
+        else:
+            logger.info("Release notes (commit body / tag message):")
+            console.print(notes_text)
 
     # Apply changes
     files_to_add: list[str] = []
@@ -552,6 +732,88 @@ def _run_impl(args: Any) -> int:
 
     if dry_run:
         logger.info("Dry-run: no file changes, no commit/tag/push performed")
+
+        # Show how the annotated tag message would look
+        if do_tag and not getattr(args, "no_tag", False):
+            tag_message = notes_text or tag_name
+            # Append preview footer with current time and git author (best-effort)
+            try:
+                now_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            except Exception:
+                now_str = ""
+            author_name = ""
+            author_email = ""
+            try:
+                author_name = (
+                    subprocess.check_output(
+                        ["git", "config", "user.name"], text=True
+                    )
+                    .strip()
+                    or ""
+                )
+            except Exception:
+                author_name = ""
+            try:
+                author_email = (
+                    subprocess.check_output(
+                        ["git", "config", "user.email"], text=True
+                    )
+                    .strip()
+                    or ""
+                )
+            except Exception:
+                author_email = ""
+
+            footer_parts: list[str] = []
+            if now_str:
+                footer_parts.append(f"Date: {now_str}")
+            if author_name or author_email:
+                if author_email:
+                    footer_parts.append(f"Author: {author_name} <{author_email}>".strip())
+                else:
+                    footer_parts.append(f"Author: {author_name}".strip())
+
+            if footer_parts:
+                tag_message_with_footer = (
+                    f"{tag_message}\n" + " - ".join(footer_parts)
+                )
+            else:
+                tag_message_with_footer = tag_message
+
+            bordered.create_bordered_content(
+                tag_message_with_footer,
+                title="TAG NOTES PREVIEW",
+                dry_run=True,
+            )
+        else:
+            logger.info(
+                "Dry-run: tagging is disabled (--no-tag); no annotated tag "
+                "would be created."
+            )
+
+        # Preview remote release actions, if requested
+        create_gitlab_release = bool(getattr(args, "gitlab_release", False))
+        create_github_draft = bool(getattr(args, "github_draft_release", False))
+
+        if create_gitlab_release or create_github_draft:
+            if getattr(args, "no_tag", False):
+                logger.info(
+                    "Dry-run: remote releases would be skipped because tagging "
+                    "is disabled (--no-tag)."
+                )
+            else:
+                logger.info("Dry-run: remote releases that would be created:")
+                if create_gitlab_release:
+                    logger.info(
+                        f"- GitLab Release for tag {tag_name} "
+                        "(description taken from release notes above)"
+                    )
+                if create_github_draft:
+                    logger.info(
+                        f"- GitHub draft Release for tag {tag_name} "
+                        "(body taken from release notes above)"
+                    )
+
         return 0
 
     # Write version to file(s) after confirming not dry-run
@@ -579,6 +841,27 @@ def _run_impl(args: Any) -> int:
     except subprocess.CalledProcessError as e:
         logger.error(f"Git operation failed: {e}")
         raise _Exit(1)
+
+    # Optional: create remote Releases (GitLab or GitHub draft)
+    create_gitlab_release = bool(getattr(args, "gitlab_release", False))
+    create_github_draft = bool(getattr(args, "github_draft_release", False))
+
+    if create_gitlab_release or create_github_draft:
+        if not do_tag:
+            logger.warning(
+                "Skipping remote release creation because tagging was disabled "
+                "(--no-tag)."
+            )
+        elif not do_push:
+            logger.warning(
+                "Skipping remote release creation because --push was not used; "
+                "use --push to push commits and tags before creating remote releases."
+            )
+        else:
+            if create_gitlab_release:
+                _create_gitlab_release(tag_name, notes_text or "")
+            if create_github_draft:
+                _create_github_draft_release(tag_name, notes_text or "")
 
     logger.success(f"Bumped to {tag_name}")
     return 0

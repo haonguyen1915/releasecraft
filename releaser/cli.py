@@ -45,6 +45,16 @@ def add_bump_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--changelog-file", type=str, help="Changelog path (default: CHANGELOG.md)"
     )
+    parser.add_argument(
+        "--gitlab-release",
+        action="store_true",
+        help="Create a GitLab Release for the new tag (requires GITLAB_TOKEN)",
+    )
+    parser.add_argument(
+        "--github-draft-release",
+        action="store_true",
+        help="Create a GitHub draft Release for the new tag (requires GITHUB_TOKEN or GH_TOKEN)",
+    )
 
 
 def add_init_arguments(parser: argparse.ArgumentParser) -> None:
