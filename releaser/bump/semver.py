@@ -6,7 +6,9 @@ from typing import Optional
 
 
 _SEMVER_RE = re.compile(
-    r"^(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)(?:-(?P<pre>[0-9A-Za-z\.-]+))?(?:\+(?P<meta>[0-9A-Za-z\.-]+))?$"
+    r"^(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)"
+    r"(?:-?(?P<pre>[0-9A-Za-z\.-]+))?"
+    r"(?:\+(?P<meta>[0-9A-Za-z\.-]+))?$"
 )
 
 

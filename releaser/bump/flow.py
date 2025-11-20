@@ -63,7 +63,7 @@ def _git_commit_tag_push(
     if do_commit:
         subprocess.run(["git", "add", *files_to_add], check=False)
         # Improved commit subject for clarity
-        msg = f"chore(release): bump version to {tag_name}"
+        msg = f"chore: bump version to {tag_name}"
         if notes:
             msg += f"\n\n{notes}"
         subprocess.run(["git", "commit", "-m", msg], check=True)

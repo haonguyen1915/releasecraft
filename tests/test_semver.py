@@ -9,6 +9,14 @@ def test_semver_parse_and_finalize():
     assert semver.finalize("1.2.3-rc.1") == "1.2.3"
 
 
+def test_semver_parse_pep440_rc_style():
+    # PEP 440-style pre-release without hyphen (e.g. 1.2.3rc1)
+    v = semver.parse("1.2.3rc1")
+    assert v.major == 1 and v.minor == 2 and v.patch == 3
+    assert v.pre == "rc1"
+    assert semver.finalize("1.2.3rc1") == "1.2.3"
+
+
 def test_semver_bump_base():
     assert semver.bump_base("1.2.3", "patch") == "1.2.4"
     assert semver.bump_base("1.2.3", "minor") == "1.3.0"
