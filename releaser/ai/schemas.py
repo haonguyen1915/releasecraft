@@ -29,7 +29,7 @@ class ReleaseNotes(BaseModel):
 
         # Highlights (main focus)
         if self.highlights:
-            parts.append("### Highlights")
+            parts.append("### What's Changed")
             parts.extend(f"- {h}" for h in (self.highlights or []))
             parts.append("")
 
