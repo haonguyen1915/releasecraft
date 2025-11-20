@@ -1,3 +1,46 @@
+## [0.3.0-rc.2] - 2025-11-20 (Pre-release)
+
+### Release Notes
+
+Enhanced release management with new features and improved configuration.
+
+### What's Changed
+- Introduced GitLab and GitHub release options for streamlined version management.
+- Added auto-add-all option to CLI for easier commit handling.
+- Implemented logging configuration support for better debugging and monitoring.
+
+### Features
+
+- feat: add GitLab and GitHub release options (322a5f1)
+- feat: add auto-add-all option to CLI (8e7b47c)
+- feat: add logging configuration support (c04f2a0)
+
+### Bug Fixes
+
+- fix: update package data configuration (ed5ed1d)
+
+### Documentation
+
+- docs: add repository guidelines and update README (5ce96a2)
+- docs: update README for ReleaseCraft (7ddbe7d)
+
+### Refactoring
+
+- refactor: improve changelog header formatting (701415d)
+- refactor: update highlights section header (b4b5149)
+- refactor: improve semver regex and tests (324947c)
+- refactor: enhance pre-release configuration handling (8e1e2fa)
+
+### Chores
+
+- chore: fix lint (496752b)
+- chore: fix lint errors (ddb4298)
+- chore: update ReadMe (72f9d3e)
+
+**Contributors:** @Nguyễn Văn Hảo
+
+**Compare changes:** [v0.3.0-rc.1...v0.3.0-rc.2](https://github.com/haonguyen1915/releasecraft.git/-/compare/v0.3.0-rc.1...v0.3.0-rc.2)
+
 # Changelog
 
 ## v0.3.0-rc.1 – 2025-11-16

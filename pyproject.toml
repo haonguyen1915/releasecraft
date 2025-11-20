@@ -4,12 +4,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "releasecraft"
-version = "0.3.0-rc1"
+version = "0.3.0-rc.2"
 description = "A CLI tool for generating releases and changelogs, and streaming out stdout in a fancy way."
 readme = "README.md"
 classifiers = [ "Development Status :: 3 - Alpha", "Intended Audience :: Developers", "License :: OSI Approved :: MIT License", "Programming Language :: Python :: 3", "Programming Language :: Python :: 3.9", "Programming Language :: Python :: 3.10", "Programming Language :: Python :: 3.11", "Programming Language :: Python :: 3.12",]
 requires-python = ">=3.9,<4.0"
-dependencies = [ "click>=8.0.0", "requests>=2.25.0", "PyYAML>=5.4.0", "GitPython>=3.1.0", "tabulate>=0.8.7", "packaging>=20.0", "pyfiglet==1.0.3", "matplotlib>=3.3.0", "python-socketio==5.13.0", "toml>=0.10.2,<0.11.0", "instructor (>=1.13.0,<2.0.0)", "colorama (>=0.4.6,<0.5.0)"]
+dependencies = [ "click>=8.0.0", "requests>=2.25.0", "PyYAML>=5.4.0", "GitPython>=3.1.0", "tabulate>=0.8.7", "packaging>=20.0", "pyfiglet==1.0.3", "matplotlib>=3.3.0", "python-socketio==5.13.0", "toml>=0.10.2,<0.11.0", "instructor (>=1.13.0,<2.0.0)", "colorama (>=0.4.6,<0.5.0)",]
 [[project.authors]]
 name = "haonguyen"
 email = "vanhao1915@gmail.com"
@@ -77,13 +77,10 @@ ignore-patterns = [ "tests/.*",]
 [tool.pylint.messages_control]
 disable = [ "missing-module-docstring", "missing-class-docstring", "missing-function-docstring", "line-too-long", "import-outside-toplevel", "unused-argument", "unused-variable", "too-many-locals", "too-many-statements", "too-many-arguments", "too-many-branches", "too-many-instance-attributes", "too-many-nested-blocks", "broad-exception-caught", "broad-exception-raised", "invalid-name", "import-error", "no-else-return", "too-many-return-statements", "too-few-public-methods", "duplicate-code", "logging-fstring-interpolation", "consider-using-with", "unnecessary-comprehension", "using-constant-test", "raise-missing-from", "consider-using-sys-exit", "reimported", "wrong-import-order", "cyclic-import", "redefined-outer-name", "subprocess-run-check", "unspecified-encoding", "arguments-differ", "possibly-unused-variable", "no-member", "too-many-lines",]
 
+[tool.setuptools.package-data]
+releaser = [ "ai/prompts/*.md", "ai/prompts/*.md.j2",]
+
 [tool.setuptools.packages.find]
 where = [ ".",]
 include = [ "releaser*",]
 exclude = [ "tests*",]
-
-[tool.setuptools.package-data]
-releaser = [
-    "ai/prompts/*.md",
-    "ai/prompts/*.md.j2",
-]
