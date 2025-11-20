@@ -1042,8 +1042,19 @@ def _build_changelog_content(
     date_str: str,
     notes_text: str,
 ) -> str:
-    tag_name = f"{tag_prefix}{new_version}"
-    header = f"## {tag_name} – {date_str}\n\n"
+    tag_name = f"{tag_prefix}{new_version}" if new_version else f"{tag_prefix}{current_version}"
+    # Keep a Changelog style header: ## [VERSION] - yyyy-mm-dd
+    version_label = new_version or current_version or "Unreleased"
+    base_header = f"## [{version_label}] - {date_str}"
+    # Optionally annotate pre-releases for clarity
+    try:
+        parsed_new = parse(new_version)
+        is_pre = parsed_new.pre is not None
+    except Exception:
+        is_pre = "-" in new_version
+    if is_pre:
+        base_header += " (Pre-release)"
+    header = base_header + "\n\n"
 
     body = ""
     # If auto mode and git repo present, derive content from commits
