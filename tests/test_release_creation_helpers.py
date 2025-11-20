@@ -1,6 +1,4 @@
-from types import SimpleNamespace
 
-import types
 
 import releaser.bump.flow as flow
 

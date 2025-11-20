@@ -9,7 +9,7 @@ import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional, Tuple
-from urllib.parse import urlparse
+from urllib.parse import urlparse, quote
 
 import requests
 
@@ -263,7 +263,7 @@ def _create_gitlab_release(tag_name: str, body: str) -> None:
         )
         return
 
-    project_id = requests.utils.quote(slug, safe="")
+    project_id = quote(slug, safe="")
     url = f"{api_base}/projects/{project_id}/releases"
     headers = {"PRIVATE-TOKEN": token}
     payload = {
