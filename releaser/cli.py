@@ -46,6 +46,14 @@ def add_bump_arguments(parser: argparse.ArgumentParser) -> None:
         "--changelog-file", type=str, help="Changelog path (default: CHANGELOG.md)"
     )
     parser.add_argument(
+        "--release",
+        action="store_true",
+        help=(
+            "Create a remote release (GitLab Release or GitHub draft Release) "
+            "based on the git remote host"
+        ),
+    )
+    parser.add_argument(
         "--gitlab-release",
         action="store_true",
         help="Create a GitLab Release for the new tag (requires GITLAB_TOKEN)",

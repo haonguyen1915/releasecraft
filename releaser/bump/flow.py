@@ -46,6 +46,7 @@ class BumpArgs:
     notes_file: Optional[str] = None
     changelog: bool = False
     changelog_file: Optional[str] = None
+    release: bool = False
     gitlab_release: bool = False
     github_draft_release: bool = False
 
@@ -285,6 +286,52 @@ def _create_gitlab_release(tag_name: str, body: str) -> None:
         )
     else:
         logger.info("Created GitLab Release successfully.")
+
+
+def _auto_select_release_targets(args: Any) -> Tuple[bool, bool]:
+    """Determine which remote release targets to use based on flags and git remote.
+
+    Returns:
+        (use_gitlab_release, use_github_draft_release)
+    """
+    create_gitlab_release = bool(getattr(args, "gitlab_release", False))
+    create_github_draft = bool(getattr(args, "github_draft_release", False))
+    auto_release = bool(getattr(args, "release", False))
+
+    # If user explicitly specified a target, respect that choice.
+    if create_gitlab_release or create_github_draft or not auto_release:
+        return create_gitlab_release, create_github_draft
+
+    # Auto-detect from git remote URL
+    repo_url = ""
+    try:
+        repo_url = git_utils.get_repo_url()
+    except Exception:
+        repo_url = ""
+
+    if not repo_url:
+        logger.warning(
+            "Could not determine git remote URL; skipping automatic remote release."
+        )
+        return False, False
+
+    parsed = urlparse(repo_url.replace(":", "/"))
+    host = (parsed.hostname or "").lower()
+
+    # Prefer explicit API URL overrides when present
+    gitlab_api_set = bool(os.environ.get("GITLAB_API_URL"))
+    github_api_set = bool(os.environ.get("GITHUB_API_URL"))
+
+    if "gitlab" in host or gitlab_api_set:
+        return True, False
+    if "github" in host or github_api_set:
+        return False, True
+
+    logger.warning(
+        f"Remote host '{host}' is not recognized as GitLab or GitHub; "
+        "skipping automatic remote release."
+    )
+    return False, False
 
 
 def _read_notes_from_flags(notes: Optional[str], notes_file: Optional[str]) -> str:
@@ -792,8 +839,7 @@ def _run_impl(args: Any) -> int:
             )
 
         # Preview remote release actions, if requested
-        create_gitlab_release = bool(getattr(args, "gitlab_release", False))
-        create_github_draft = bool(getattr(args, "github_draft_release", False))
+        create_gitlab_release, create_github_draft = _auto_select_release_targets(args)
 
         if create_gitlab_release or create_github_draft:
             if getattr(args, "no_tag", False):
@@ -843,8 +889,7 @@ def _run_impl(args: Any) -> int:
         raise _Exit(1)
 
     # Optional: create remote Releases (GitLab or GitHub draft)
-    create_gitlab_release = bool(getattr(args, "gitlab_release", False))
-    create_github_draft = bool(getattr(args, "github_draft_release", False))
+    create_gitlab_release, create_github_draft = _auto_select_release_targets(args)
 
     if create_gitlab_release or create_github_draft:
         if not do_tag:
