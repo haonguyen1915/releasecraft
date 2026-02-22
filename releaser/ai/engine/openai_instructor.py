@@ -82,10 +82,19 @@ def generate_structured(
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_prompt},
     ]
+    # Newer OpenAI models (o1, o3, gpt-4.1, etc.) require max_completion_tokens
+    # instead of the legacy max_tokens parameter.
+    _LEGACY_MAX_TOKENS_MODELS = {"gpt-3.5", "gpt-4o", "gpt-4-"}
+    use_legacy = any(model.startswith(p) for p in _LEGACY_MAX_TOKENS_MODELS)
+    token_kwargs = (
+        {"max_tokens": max_tokens}
+        if use_legacy
+        else {"max_completion_tokens": max_tokens}
+    )
     result: Any = client.chat.completions.create(
         model=model,
         temperature=temperature,
-        max_tokens=max_tokens,
+        **token_kwargs,
         messages=messages,
         response_model=response_model,
     )
