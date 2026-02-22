@@ -81,7 +81,7 @@ def add_init_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--project-type",
         type=str,
-        choices=["auto", "poetry", "setuptools", "npm"],
+        choices=["auto", "poetry", "setuptools", "npm", "cargo"],
         help="Project type",
     )
     parser.add_argument("--tag-prefix", type=str, help="Default tag prefix (v)")

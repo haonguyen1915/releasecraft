@@ -81,7 +81,7 @@ def run(args: Any) -> int:
         # Show defaults explicitly in the prompt text for clarity
         project_type = prompt_choice(
             f"Project type [default: {project_type}]",
-            ["auto", "poetry", "setuptools", "npm"],
+            ["auto", "poetry", "setuptools", "npm", "cargo"],
             default=project_type,
         )
         tag_prefix = prompt_input(
@@ -178,8 +178,9 @@ def run(args: Any) -> int:
         "poetry": {"prefer_command": True},
         "setuptools": {"version_file": "pkg/__init__.py"},
         "npm": {"prefer_command": True, "workspace": False},
+        "cargo": {"tauri_path": "src-tauri/Cargo.toml"},
     }
-    if project_type in ("poetry", "setuptools", "npm"):
+    if project_type in ("poetry", "setuptools", "npm", "cargo"):
         doc["provider"] = {project_type: provider_all[project_type]}
     else:
         # auto: include all provider stubs so users can tweak later
@@ -232,7 +233,7 @@ def _render_full_config(doc: Dict[str, Any]) -> str:
     lines.append("\n")
     lines.append("# --- Core Project Settings ---\n")
     lines.append("[project]\n")
-    lines.append("# Provider type: auto|poetry|setuptools|npm\n")
+    lines.append("# Provider type: auto|poetry|setuptools|npm|cargo\n")
     lines.append(f"type = \"{project.get('type', 'auto')}\"\n")
     lines.append("# Tag prefix for git tags (e.g., v1.2.3)\n")
     lines.append(f"tag_prefix = \"{project.get('tag_prefix', 'v')}\"\n")
@@ -400,6 +401,11 @@ def _render_full_config(doc: Dict[str, Any]) -> str:
             lines.append("prefer_command = true\n")
             lines.append("workspace = false\n")
             lines.append("\n")
+        elif project_type == "cargo" and "cargo" in providers:
+            lines.append("[provider.cargo]\n")
+            lines.append("# Fallback Cargo.toml path for Tauri projects\n")
+            lines.append('tauri_path = "src-tauri/Cargo.toml"\n')
+            lines.append("\n")
         elif project_type == "auto":
             # For 'auto', show all providers as stubs for reference
             if "poetry" in providers:
@@ -417,6 +423,11 @@ def _render_full_config(doc: Dict[str, Any]) -> str:
                 lines.append("# Prefer `npm version`; workspace is for monorepos\n")
                 lines.append("prefer_command = true\n")
                 lines.append("workspace = false\n")
+                lines.append("\n")
+            if "cargo" in providers:
+                lines.append("[provider.cargo]\n")
+                lines.append("# Fallback Cargo.toml path for Tauri projects\n")
+                lines.append('tauri_path = "src-tauri/Cargo.toml"\n')
                 lines.append("\n")
 
     lines.append("\n# --- Commit Linting ---\n")

@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional
 class ProjectConfig:
     """Project configuration (type, tag prefix, native tools)."""
 
-    type: str = "auto"  # auto|poetry|setuptools|npm
+    type: str = "auto"  # auto|poetry|setuptools|npm|cargo
     tag_prefix: str = "v"
     use_native: bool = True
 
@@ -162,6 +162,7 @@ class ProviderConfig:
     poetry: Dict[str, Any] = field(default_factory=dict)
     npm: Dict[str, Any] = field(default_factory=dict)
     setuptools: Dict[str, Any] = field(default_factory=dict)
+    cargo: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass

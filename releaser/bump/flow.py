@@ -422,13 +422,16 @@ def _run_impl(args: Any) -> int:
     except _Exit as exc:
         return exc.code
 
-    # Detect provider (Poetry first)
-    provider = providers.detect_provider(cwd=".")
-    if not provider:
+    # Detect providers (Poetry → NPM → Cargo)
+    all_providers = providers.detect_providers(cwd=".", project_type=cfg.project.type)
+    if not all_providers:
         logger.error(
-            "No compatible provider detected (Poetry expected). Ensure pyproject.toml exists."
+            "No compatible provider detected. "
+            "Ensure pyproject.toml, package.json, or Cargo.toml exists."
         )
         raise _Exit(1)
+    # Use the first provider for reading the current version
+    provider = all_providers[0]
 
     tag_prefix = cfg.project.tag_prefix or "v"
 
@@ -485,8 +488,9 @@ def _run_impl(args: Any) -> int:
             # If parsing fails, keep file version
             pass
 
+    provider_names = ", ".join(p.name for p in all_providers)
     logger.info(
-        f"Detected provider: poetry • Current version: {tag_prefix}{current_version}"
+        f"Detected provider(s): {provider_names} • Current version: {tag_prefix}{current_version}"
     )
 
     # Decide bump type / target version
@@ -862,11 +866,12 @@ def _run_impl(args: Any) -> int:
 
         return 0
 
-    # Write version to file(s) after confirming not dry-run
-    updated_file = provider.write_version(
-        str(target_version), use_native=cfg.project.use_native
-    )
-    files_to_add.append(str(updated_file))
+    # Write version to ALL detected provider files
+    for prov in all_providers:
+        updated_file = prov.write_version(
+            str(target_version), use_native=cfg.project.use_native
+        )
+        files_to_add.append(str(updated_file))
 
     # Update additional files from config (e.g., pkg/__init__.py:__version__, setup.cfg:metadata.version)
     logger.debug(f"Additional file targets: {cfg.release.version_targets}")

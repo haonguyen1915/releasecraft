@@ -281,6 +281,8 @@ def _merge_into_config(cfg: AppConfig, data: Dict[str, Any]) -> None:
             cfg.provider.npm = dict(provider.get("npm") or {})
         if "setuptools" in provider:
             cfg.provider.setuptools = dict(provider.get("setuptools") or {})
+        if "cargo" in provider:
+            cfg.provider.cargo = dict(provider.get("cargo") or {})
 
     # [logging] section
     logging_s = data.get("logging", {}) or {}
