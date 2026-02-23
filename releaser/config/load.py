@@ -117,6 +117,10 @@ def _merge_into_config(cfg: AppConfig, data: Dict[str, Any]) -> None:
                 cfg.release.change_log.mode = str(
                     rcl.get("mode") or cfg.release.change_log.mode
                 )
+            if "exclude_types" in rcl:
+                cfg.release.change_log.exclude_types = list(
+                    rcl.get("exclude_types") or []
+                )
 
         # [release.auto_gen_notes] subsection
         rn = rel.get("auto_gen_notes", {}) or {}

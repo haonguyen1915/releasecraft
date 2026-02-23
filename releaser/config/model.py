@@ -47,6 +47,7 @@ class ChangeLogConfig:
     mode: str = (
         "auto"  # 'auto' to derive from git commits; 'notes' to only include user notes
     )
+    exclude_types: List[str] = field(default_factory=list)  # e.g. ["chore", "test", "ci"]
 
 
 @dataclass

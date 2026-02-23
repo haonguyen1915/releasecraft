@@ -1128,6 +1128,9 @@ def _build_changelog_content(
                 "chore": [],
                 "other": [],
             }
+            exclude_types = {
+                t.lower() for t in cfg.release.change_log.exclude_types
+            }
             for line in entries or []:
                 if not line.strip():
                     continue
@@ -1138,6 +1141,8 @@ def _build_changelog_content(
                 ctype = (ctype or "other").lower()
                 if ctype not in sections:
                     ctype = "other"
+                if ctype in exclude_types:
+                    continue
                 bullet = f"- {subject.strip()} ({sha[:7]})"
                 sections[ctype].append(bullet)
 

@@ -147,6 +147,7 @@ def run(args: Any) -> int:
                 "enabled": True,
                 "file": "CHANGELOG.md",
                 "mode": "auto",
+                "exclude_types": ["chore", "ci"],
             },
             "auto_gen_notes": {
                 "enabled": False,
@@ -327,6 +328,13 @@ def _render_full_config(doc: Dict[str, Any]) -> str:
     lines.append(
         f"mode = \"{change_log.get('mode', 'auto') if isinstance(change_log, dict) else 'auto'}\"\n"
     )
+    exclude_types = (
+        change_log.get("exclude_types", ["chore", "ci"])
+        if isinstance(change_log, dict)
+        else ["chore", "ci"]
+    )
+    lines.append("# Commit types to exclude from changelog\n")
+    lines.append(f"exclude_types = {list_str(exclude_types)}\n")
 
     lines.append("\n[release.auto_gen_notes]\n")
     lines.append("# AI-powered release notes generation\n")
