@@ -1,3 +1,29 @@
+## [0.3.0-rc.3] - 2026-02-23 (Pre-release)
+
+### Release Notes
+
+Enhanced release automation and provider support.
+
+### What's Changed
+- Added support for automatic release target selection based on Git remote configuration.
+- Introduced multi-provider support for version management, including NPM and Cargo.
+- Improved OpenAI model compatibility by updating token parameter handling.
+
+### Features
+
+- feat: support npm cargo (03d4dfd)
+- feat: add auto release target selection (f5f8efc)
+
+### Chores
+
+- chore: support ignore type in changelog (dc0ca95)
+- chore: fix update version for npm (facbc08)
+- chore: fix openai (09ab425)
+
+**Contributors:** @Nguyễn Văn Hảo
+
+**Compare changes:** [v0.3.0-rc.2...v0.3.0-rc.3](https://github.com/haonguyen1915/releasecraft.git/-/compare/v0.3.0-rc.2...v0.3.0-rc.3)
+
 ## [0.3.0-rc.2] - 2025-11-20 (Pre-release)
 
 ### Release Notes
