@@ -35,8 +35,8 @@ def test_poetry_provider_detect_and_read_project(tmp_path: Path):
 def test_poetry_provider_write_project(tmp_path: Path):
     write_pyproject_project(tmp_path, "0.1.0")
     prov = PoetryProvider(str(tmp_path))
-    path = prov.write_version("0.2.0", use_native=False)
-    assert Path(path).exists()
+    paths = prov.write_version("0.2.0", use_native=False)
+    assert all(Path(p).exists() for p in paths)
     # Re-read
     assert prov.read_version() == "0.2.0"
 

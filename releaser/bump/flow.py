@@ -174,7 +174,8 @@ def _create_github_draft_release(tag_name: str, body: str) -> None:
         )
         return
 
-    parsed = urlparse(repo_url.replace(":", "/"))
+    _url_for_parse = repo_url.replace(":", "/") if repo_url.startswith("git@") else repo_url
+    parsed = urlparse(_url_for_parse)
     host = (parsed.hostname or "").lower()
     if "github" not in host and "GITHUB_API_URL" not in os.environ:
         logger.warning(
@@ -242,7 +243,8 @@ def _create_gitlab_release(tag_name: str, body: str) -> None:
         )
         return
 
-    parsed = urlparse(repo_url.replace(":", "/"))
+    _url_for_parse = repo_url.replace(":", "/") if repo_url.startswith("git@") else repo_url
+    parsed = urlparse(_url_for_parse)
     host = (parsed.hostname or "").lower()
     if "gitlab" not in host and "GITLAB_API_URL" not in os.environ:
         logger.warning(
@@ -312,7 +314,8 @@ def _auto_select_release_targets(args: Any) -> Tuple[bool, bool]:
         )
         return False, False
 
-    parsed = urlparse(repo_url.replace(":", "/"))
+    _url_for_parse = repo_url.replace(":", "/") if repo_url.startswith("git@") else repo_url
+    parsed = urlparse(_url_for_parse)
     host = (parsed.hostname or "").lower()
 
     # Prefer explicit API URL overrides when present
@@ -865,10 +868,10 @@ def _run_impl(args: Any) -> int:
 
     # Write version to ALL detected provider files
     for prov in all_providers:
-        updated_file = prov.write_version(
+        updated_files = prov.write_version(
             str(target_version), use_native=cfg.project.use_native
         )
-        files_to_add.append(str(updated_file))
+        files_to_add.extend(updated_files)
 
     # Update additional files from config (e.g., pkg/__init__.py:__version__, setup.cfg:metadata.version)
     logger.debug(f"Additional file targets: {cfg.release.version_targets}")

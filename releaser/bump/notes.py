@@ -55,6 +55,14 @@ def append_changelog_block(changelog_path: str, block: str) -> None:
     title = "# Changelog\n\n"
     if p.exists():
         existing = p.read_text(encoding="utf-8")
-        p.write_text(block + existing)
+        # Insert after the title line if it exists, otherwise prepend
+        if existing.startswith("# "):
+            # Find end of the title line (and any blank lines after it)
+            idx = existing.index("\n") + 1
+            while idx < len(existing) and existing[idx] == "\n":
+                idx += 1
+            p.write_text(existing[:idx] + block + existing[idx:], encoding="utf-8")
+        else:
+            p.write_text(block + existing, encoding="utf-8")
     else:
         p.write_text(title + block, encoding="utf-8")
