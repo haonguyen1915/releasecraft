@@ -38,6 +38,7 @@ class BumpArgs:
     pre: bool = False
     finalize: bool = False
     dry_run: bool = False
+    apply_files: bool = False
     push: bool = False
     no_commit: bool = False
     no_tag: bool = False
@@ -781,109 +782,39 @@ def _run_impl(args: Any) -> int:
         do_tag = prompt_confirmation("Create annotated tag?", default=True)
         do_push = prompt_confirmation("Push to remote?", default=False)
 
-    if dry_run:
+    apply_files = bool(getattr(args, "apply_files", False))
+
+    # Write version files: always in normal mode, optionally in dry-run with --apply-files
+    if not dry_run or apply_files:
+        if dry_run and apply_files:
+            logger.info("Dry-run with --apply-files: writing version files only (no commit/tag/push)")
+
+        # Write version to ALL detected provider files
+        for prov in all_providers:
+            updated_files = prov.write_version(
+                str(target_version), use_native=cfg.project.use_native
+            )
+            files_to_add.extend(updated_files)
+
+        # Update additional files from config (e.g., pkg/__init__.py:__version__, setup.cfg:metadata.version)
+        logger.debug(f"Additional file targets: {cfg.release.version_targets}")
+        for entry in cfg.release.version_targets or []:
+            try:
+                path, selector = entry.split(":", 1)
+            except ValueError:
+                continue
+            _update_additional_file_version(
+                path.strip(), selector.strip(), str(target_version), files_to_add
+            )
+            logger.debug(f"Updated file target: {entry}")
+
+        if dry_run and apply_files:
+            logger.info(f"Updated files: {', '.join(files_to_add)}")
+            logger.success(f"Dry-run: version files updated to {tag_name} (no git operations)")
+            return 0
+    else:
         logger.info("Dry-run: no file changes, no commit/tag/push performed")
-
-        # Show how the annotated tag message would look
-        if do_tag and not getattr(args, "no_tag", False):
-            tag_message = notes_text or tag_name
-            # Append preview footer with current time and git author (best-effort)
-            try:
-                now_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-            except Exception:
-                now_str = ""
-            author_name = ""
-            author_email = ""
-            try:
-                author_name = (
-                    subprocess.check_output(
-                        ["git", "config", "user.name"], text=True
-                    )
-                    .strip()
-                    or ""
-                )
-            except Exception:
-                author_name = ""
-            try:
-                author_email = (
-                    subprocess.check_output(
-                        ["git", "config", "user.email"], text=True
-                    )
-                    .strip()
-                    or ""
-                )
-            except Exception:
-                author_email = ""
-
-            footer_parts: list[str] = []
-            if now_str:
-                footer_parts.append(f"Date: {now_str}")
-            if author_name or author_email:
-                if author_email:
-                    footer_parts.append(f"Author: {author_name} <{author_email}>".strip())
-                else:
-                    footer_parts.append(f"Author: {author_name}".strip())
-
-            if footer_parts:
-                tag_message_with_footer = (
-                    f"{tag_message}\n" + " - ".join(footer_parts)
-                )
-            else:
-                tag_message_with_footer = tag_message
-
-            bordered.create_bordered_content(
-                tag_message_with_footer,
-                title="TAG NOTES PREVIEW",
-                dry_run=True,
-            )
-        else:
-            logger.info(
-                "Dry-run: tagging is disabled (--no-tag); no annotated tag "
-                "would be created."
-            )
-
-        # Preview remote release actions, if requested
-        create_gitlab_release, create_github_draft = _auto_select_release_targets(args)
-
-        if create_gitlab_release or create_github_draft:
-            if getattr(args, "no_tag", False):
-                logger.info(
-                    "Dry-run: remote releases would be skipped because tagging "
-                    "is disabled (--no-tag)."
-                )
-            else:
-                logger.info("Dry-run: remote releases that would be created:")
-                if create_gitlab_release:
-                    logger.info(
-                        f"- GitLab Release for tag {tag_name} "
-                        "(description taken from release notes above)"
-                    )
-                if create_github_draft:
-                    logger.info(
-                        f"- GitHub draft Release for tag {tag_name} "
-                        "(body taken from release notes above)"
-                    )
-
         return 0
-
-    # Write version to ALL detected provider files
-    for prov in all_providers:
-        updated_files = prov.write_version(
-            str(target_version), use_native=cfg.project.use_native
-        )
-        files_to_add.extend(updated_files)
-
-    # Update additional files from config (e.g., pkg/__init__.py:__version__, setup.cfg:metadata.version)
-    logger.debug(f"Additional file targets: {cfg.release.version_targets}")
-    for entry in cfg.release.version_targets or []:
-        try:
-            path, selector = entry.split(":", 1)
-        except ValueError:
-            continue
-        _update_additional_file_version(
-            path.strip(), selector.strip(), str(target_version), files_to_add
-        )
-        logger.debug(f"Updated file target: {entry}")
 
     try:
         _git_commit_tag_push(

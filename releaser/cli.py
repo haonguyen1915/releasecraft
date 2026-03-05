@@ -24,6 +24,11 @@ def add_bump_arguments(parser: argparse.ArgumentParser) -> None:
         "--finalize", action="store_true", help="Convert current pre-release to stable"
     )
     parser.add_argument("--dry-run", action="store_true", help="Preview only")
+    parser.add_argument(
+        "--apply-files",
+        action="store_true",
+        help="With --dry-run: write version files but skip commit/tag/push",
+    )
     parser.add_argument("--push", action="store_true", help="Push after commit/tag")
     parser.add_argument("--no-commit", action="store_true", help="Do not commit")
     parser.add_argument("--no-tag", action="store_true", help="Do not tag")

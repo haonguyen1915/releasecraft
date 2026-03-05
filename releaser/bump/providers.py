@@ -253,8 +253,30 @@ class CargoProvider(BaseProvider):
             json.dump(data, f, indent=2)
             f.write("\n")
 
+    def _update_cargo_lock(self) -> Optional[str]:
+        """Regenerate Cargo.lock via `cargo update --workspace` if it exists.
+
+        Returns the lock file path if updated, None otherwise.
+        """
+        lock_file = self.cargo_toml.parent / "Cargo.lock"
+        if not lock_file.exists():
+            return None
+        cargo = shutil.which("cargo")
+        if not cargo:
+            return None
+        try:
+            subprocess.run(
+                [cargo, "update", "--workspace"],
+                cwd=str(self.cargo_toml.parent),
+                check=True,
+                capture_output=True,
+            )
+            return str(lock_file)
+        except subprocess.CalledProcessError:
+            return None
+
     def write_version(self, new_version: str, use_native: bool = True) -> List[str]:
-        """Write version to Cargo.toml and tauri.conf.json if present.
+        """Write version to Cargo.toml, Cargo.lock, and tauri.conf.json if present.
 
         Returns the paths of all updated files for staging.
         """
@@ -264,6 +286,11 @@ class CargoProvider(BaseProvider):
             toml.dump(data, f)
 
         updated_files = [str(self.cargo_toml)]
+
+        # Regenerate Cargo.lock if it exists
+        lock_path = self._update_cargo_lock()
+        if lock_path:
+            updated_files.append(lock_path)
 
         # Also update tauri.conf.json if it exists
         tauri_conf = self._find_tauri_conf()
