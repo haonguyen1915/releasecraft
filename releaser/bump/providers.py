@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import subprocess
 from abc import ABC, abstractmethod
@@ -253,42 +254,97 @@ class CargoProvider(BaseProvider):
             json.dump(data, f, indent=2)
             f.write("\n")
 
-    def _update_cargo_lock(self) -> Optional[str]:
-        """Regenerate Cargo.lock via `cargo update --workspace` if it exists.
+    def _find_cargo_lock(self) -> Optional[Path]:
+        """Find Cargo.lock checking both cargo_toml parent and project root."""
+        candidates = [
+            self.cargo_toml.parent / "Cargo.lock",
+            Path(self.cwd) / "Cargo.lock",
+        ]
+        for c in candidates:
+            if c.exists():
+                return c
+        return None
+
+    def _update_cargo_lock(self, new_version: str) -> Optional[str]:
+        """Update the package version in Cargo.lock.
+
+        Strategy:
+        1. Try `cargo generate-lockfile` (properly regenerates from Cargo.toml)
+        2. Fall back to regex replacement on the raw text (preserves formatting)
 
         Returns the lock file path if updated, None otherwise.
         """
-        lock_file = self.cargo_toml.parent / "Cargo.lock"
-        if not lock_file.exists():
+        lock_file = self._find_cargo_lock()
+        if not lock_file:
             return None
+
+        # Strategy 1: use cargo to regenerate the lockfile
         cargo = shutil.which("cargo")
-        if not cargo:
-            return None
+        if cargo:
+            try:
+                subprocess.run(
+                    [cargo, "generate-lockfile"],
+                    cwd=str(lock_file.parent),
+                    check=True,
+                    capture_output=True,
+                )
+                return str(lock_file)
+            except subprocess.CalledProcessError:
+                pass  # fall through to regex
+
+        # Strategy 2: regex replacement — only touch the version line for our package
         try:
-            subprocess.run(
-                [cargo, "update", "--workspace"],
-                cwd=str(self.cargo_toml.parent),
-                check=True,
-                capture_output=True,
+            cargo_data = toml.load(str(self.cargo_toml))
+            pkg_name = cargo_data.get("package", {}).get("name")
+            if not pkg_name:
+                return None
+
+            content = lock_file.read_text(encoding="utf-8")
+            # Match a [[package]] block with name = "pkg_name" followed by version = "..."
+            # Replace only the version line within that block
+            pattern = (
+                r'(\[\[package\]\]\s*\n'
+                r'name\s*=\s*"' + re.escape(pkg_name) + r'"\s*\n'
+                r')version\s*=\s*"[^"]*"'
             )
+            new_content = re.sub(pattern, rf'\g<1>version = "{new_version}"', content)
+
+            if new_content == content:
+                return None
+
+            lock_file.write_text(new_content, encoding="utf-8")
             return str(lock_file)
-        except subprocess.CalledProcessError:
+        except Exception:
             return None
+
+    def _write_cargo_toml_version(self, new_version: str) -> None:
+        """Update [package].version in Cargo.toml using regex to preserve formatting.
+
+        Avoids toml.dump() which corrupts complex quoted keys like
+        [target."cfg(target_os = \\"macos\\")".dependencies].
+        """
+        content = self.cargo_toml.read_text(encoding="utf-8")
+        # Match version = "..." inside the [package] section
+        new_content = re.sub(
+            r'(\[package\][^\[]*?)version\s*=\s*"[^"]*"',
+            rf'\g<1>version = "{new_version}"',
+            content,
+            count=1,
+            flags=re.DOTALL,
+        )
+        self.cargo_toml.write_text(new_content, encoding="utf-8")
 
     def write_version(self, new_version: str, use_native: bool = True) -> List[str]:
         """Write version to Cargo.toml, Cargo.lock, and tauri.conf.json if present.
 
         Returns the paths of all updated files for staging.
         """
-        data = toml.load(str(self.cargo_toml))
-        data.setdefault("package", {})["version"] = new_version
-        with open(self.cargo_toml, "w", encoding="utf-8") as f:
-            toml.dump(data, f)
+        self._write_cargo_toml_version(new_version)
 
         updated_files = [str(self.cargo_toml)]
 
-        # Regenerate Cargo.lock if it exists
-        lock_path = self._update_cargo_lock()
+        # Update Cargo.lock if it exists
+        lock_path = self._update_cargo_lock(new_version)
         if lock_path:
             updated_files.append(lock_path)
 
