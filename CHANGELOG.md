@@ -1,3 +1,25 @@
+## [0.3.1] - 2026-04-23
+
+### Release Notes
+
+Enhanced release with new dry-run capabilities and improved dependency management.
+
+### What's Changed
+- Introduced 'apply-files' option for dry-run to preview changes without committing.
+- Optimized Cargo.lock update strategy for better dependency management.
+
+### Features
+
+- feat: add apply-files option for dry-run (6626d34)
+
+### Refactoring
+
+- refactor: improve Cargo.lock update strategy (12b6a34)
+
+**Contributors:** @Nguyễn Văn Hảo
+
+**Compare changes:** [v0.3.0-rc.3...v0.3.1](https://github.com/haonguyen1915/releasecraft.git/-/compare/v0.3.0-rc.3...v0.3.1)
+
 ## [0.3.0-rc.3] - 2026-02-23 (Pre-release)
 
 ### Release Notes
