@@ -7,7 +7,10 @@ from typing import Optional
 
 _SEMVER_RE = re.compile(
     r"^(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)"
-    r"(?:-?(?P<pre>[0-9A-Za-z\.-]+))?"
+    # Pre-release separator may be '-', '.', or omitted (e.g. -rc.1, .rc10, rc1).
+    # The leading separator is consumed but not captured, so pre is normalized
+    # to the bare identifier (e.g. ".rc10" -> "rc10").
+    r"(?:[-.]?(?P<pre>[0-9A-Za-z][0-9A-Za-z.-]*))?"
     r"(?:\+(?P<meta>[0-9A-Za-z\.-]+))?$"
 )
 

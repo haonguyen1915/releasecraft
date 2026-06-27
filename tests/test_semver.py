@@ -17,6 +17,24 @@ def test_semver_parse_pep440_rc_style():
     assert semver.finalize("1.2.3rc1") == "1.2.3"
 
 
+def test_semver_parse_dot_rc_style():
+    # Dotted pre-release separator (e.g. 1.0.0.rc10) -> pre normalized to "rc10"
+    v = semver.parse("1.0.0.rc10")
+    assert v.major == 1 and v.minor == 0 and v.patch == 0
+    assert v.pre == "rc10"
+    assert semver.finalize("1.0.0.rc10") == "1.0.0"
+    # Dotted separator with numbered identifier (e.g. 2.0.0.beta.5)
+    assert semver.parse("2.0.0.beta.5").pre == "beta.5"
+
+
+def test_semver_apply_prerelease_continue_from_dot_rc():
+    # Continuing from a dotted rc form should increment the numeric suffix
+    v = semver.apply_prerelease(
+        "1.0.0", previous_version="1.0.0.rc10", channel="rc", auto_increment=True
+    )
+    assert v == "1.0.0-rc.11"
+
+
 def test_semver_bump_base():
     assert semver.bump_base("1.2.3", "patch") == "1.2.4"
     assert semver.bump_base("1.2.3", "minor") == "1.3.0"
