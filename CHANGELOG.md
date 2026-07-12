@@ -1,3 +1,18 @@
+## [0.3.2] - 2026-07-12
+
+### Release Notes
+
+### What's Changed
+- Resolved a critical issue with dependency versioning to enhance stability.
+
+### Bug Fixes
+
+- fix: bump (2ff6f7f)
+
+**Contributors:** @Nguyễn Văn Hảo
+
+**Compare changes:** [v0.3.1...v0.3.2](https://github.com/haonguyen1915/releasecraft.git/-/compare/v0.3.1...v0.3.2)
+
 ## [0.3.1] - 2026-04-23
 
 ### Release Notes
